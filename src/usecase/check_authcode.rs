@@ -20,8 +20,6 @@ pub struct Model {
 pub enum Error {
     #[error("")]
     InvalidAuthcode,
-    #[error("")]
-    Repository(#[from] RepositoryError),
 }
 
 impl From<Error> for crate::Error {

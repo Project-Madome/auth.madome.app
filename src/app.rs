@@ -100,7 +100,11 @@ async fn service(
     match response {
         Ok(response) => Ok(response),
         // TODO: 에러 핸들링
-        Err(_err) => Ok(Response::builder().status(500).body(Body::empty()).unwrap()),
+        Err(err) => {
+            println!("{}", err);
+
+            Ok(Response::builder().status(500).body(Body::empty()).unwrap())
+        }
     }
 }
 

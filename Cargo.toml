@@ -17,3 +17,9 @@ reqwest = { version = "0.11.9", features = ["json"] }
 sai = "0.1.4"
 thiserror = "1.0.30"
 dotenv = "0.15.0"
+aws-config = "0.5.2"
+aws-sdk-sesv2 = "0.5.2"
+nanoid = "0.4.0"
+log = "0.4.14"
+simple_logger = "2.1.0"
+chrono = { version = "0.4.19", features = [] }

@@ -9,13 +9,13 @@ use crate::{
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Msg Layer: {0}")]
+    #[error("Msg: {0}")]
     Msg(#[from] Msg),
-    #[error("Command Layer: {0}")]
+    #[error("Command: {0}")]
     Command(#[from] CommandError),
-    #[error("UseCase Layer: {0}")]
+    #[error("UseCase: {0}")]
     UseCase(#[from] UseCaseError),
-    #[error("Repository Layer: {0}")]
+    #[error("Repository: {0}")]
     Repository(#[from] RepositoryError),
 
     // TODO: 나중에 위치 재선정
@@ -27,33 +27,33 @@ type Msg = crate::msg::Error;
 
 #[derive(Debug, thiserror::Error)]
 pub enum RepositoryError {
-    #[error("")]
+    #[error("Authcode: {0}")]
     Authcode(#[from] authcode_repository::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum CommandError {
-    #[error("")]
+    #[error("GetUserInfo: {0}")]
     GetUserInfo(#[from] get_user_info::Error),
-    #[error("")]
+    #[error("RandomCode: {0}")]
     RandomCode(#[from] random_code::Error),
-    #[error("")]
+    #[error("SendEmail: {0}")]
     SendEmail(#[from] send_email::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum UseCaseError {
-    #[error("")]
+    #[error("CheckAccessToken: {0}")]
     CheckAccessToken(#[from] check_access_token::Error),
-    #[error("")]
+    #[error("CheckRefreshToken: {0}")]
     CheckRefreshToken(#[from] check_refresh_token::Error),
-    #[error("")]
+    #[error("CheckAuthcode: {0}")]
     CheckAuthcode(#[from] check_authcode::Error),
-    #[error("")]
+    #[error("CreateTokenPair: {0}")]
     CreateTokenPair(#[from] create_token_pair::Error),
-    #[error("")]
+    #[error("CheckTokenPair: {0}")]
     CheckTokenPair(#[from] check_token_pair::Error),
-    #[error("")]
+    #[error("CreateAuthcode: {0}")]
     CreateAuthcode(#[from] create_authcode::Error),
 }
 

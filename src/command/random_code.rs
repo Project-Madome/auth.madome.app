@@ -1,3 +1,4 @@
+use nanoid::nanoid;
 use sai::Component;
 
 use crate::error::CommandError;
@@ -14,7 +15,7 @@ impl Command<(), String> for RandomCode {
     type Error = crate::Error;
 
     async fn execute(&self, _: ()) -> Result<String, Self::Error> {
-        unimplemented!()
+        Ok(nanoid!(12))
     }
 }
 

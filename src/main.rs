@@ -1,3 +1,4 @@
+use madome_auth::RootRegistry;
 use sai::System;
 use tokio::signal;
 
@@ -5,7 +6,7 @@ use tokio::signal;
 async fn main() {
     println!("Hello, world!");
 
-    use madome_auth::RootRegistry;
+    simple_logger::init().unwrap();
 
     let mut system = System::<RootRegistry>::new();
 
