@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::{Duration, SystemTime};
 use std::{convert::Infallible, net::SocketAddr};
 
 use hyper::{
@@ -6,6 +7,7 @@ use hyper::{
     http::{Request, Response},
     service::{make_service_fn, service_fn},
 };
+use inspect::{Inspect, InspectOk};
 use sai::{Component, ComponentLifecycle, Injected};
 
 use crate::command::CommandSet;
@@ -95,17 +97,36 @@ async fn service(
     request: Request<Body>,
     resolver: Arc<Resolver>,
 ) -> Result<Response<Body>, Infallible> {
+    let req_method = request.method().to_owned();
+    let req_uri = request.uri().to_string();
+
+    log::info!("HTTP Request {} {}", req_method, req_uri);
+
+    let start = SystemTime::now();
+
     let response = handler(request, resolver).await;
+
+    let end = start
+        .elapsed()
+        .as_ref()
+        .map(Duration::as_millis)
+        .unwrap_or(0);
 
     match response {
         Ok(response) => Ok(response),
-        // TODO: 에러 핸들링
-        Err(err) => {
-            println!("{}", err);
-
-            Ok(Response::builder().status(500).body(Body::empty()).unwrap())
-        }
+        Err(err) => Ok(err.inspect(|e| log::error!("{}", e)).into()),
     }
+    .inspect_ok(|res| {
+        log::info!(
+            "HTTP Response {} {} {} {}",
+            req_method,
+            req_uri,
+            res.status(),
+            end
+        )
+    })
+
+    // log::error!("{}", err);
 }
 
 #[async_trait::async_trait]
@@ -131,6 +152,8 @@ impl ComponentLifecycle for HttpServer {
 
             let server = hyper::Server::bind(&addr)
                 .serve(make_service_fn(move |_| svc(Arc::clone(&resolver))));
+
+            log::info!("started http server: 0.0.0.0:{}", port);
 
             if let Err(err) = server.await {
                 panic!("{:?}", err);

@@ -4,7 +4,11 @@ use hyper::{Body, Response, StatusCode};
 use serde::Serialize;
 
 use crate::{
-    command::CommandSet, constant::http::header, entity::token::Token, error::UseCaseError,
+    command::CommandSet,
+    constant::http::cookie::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN},
+    entity::token::Token,
+    error::UseCaseError,
+    utils::http::{SetCookie, SetCookieOptions, SetHeaders},
 };
 
 use super::{check_authcode, check_token_pair};
@@ -32,20 +36,6 @@ impl From<check_token_pair::Model> for Payload {
     }
 }
 
-/* #[async_trait::async_trait]
-impl AsyncTryFrom<Request<Body>> for Payload {
-    type Error = crate::Error;
-
-    async fn try_from(request: Request<Body>) -> Result<Self, Self::Error> {
-        let chunks = request.body_mut().read_chunks().await?;
-
-        let payload =
-            serde_json::from_slice::<Payload>(&chunks).map_err(crate::Error::JsonDeserialize);
-
-        payload
-    }
-} */
-
 #[derive(Serialize)]
 pub struct Model {
     pub access_token: String,
@@ -53,14 +43,31 @@ pub struct Model {
 }
 
 impl From<Model> for Response<Body> {
-    fn from(model: Model) -> Self {
-        let serialized = serde_json::to_vec(&model).expect("json serialize");
+    fn from(
+        Model {
+            access_token,
+            refresh_token,
+        }: Model,
+    ) -> Self {
+        let set_cookie_options = SetCookieOptions::new().domain("madome.app").http_only(true);
+        let set_cookie = SetCookie::new()
+            .set(
+                MADOME_ACCESS_TOKEN,
+                access_token,
+                set_cookie_options.clone().max_age(3600 * 4),
+            )
+            .set(
+                MADOME_REFRESH_TOKEN,
+                refresh_token,
+                set_cookie_options.max_age(3600 * 24 * 7),
+            );
 
         Response::builder()
-            .status(StatusCode::OK)
-            // TODO: Set-Cookie
-            .header(header::CONTENT_TYPE, header::APPLICATION_JSON)
-            .body(Body::from(serialized))
+            .status(StatusCode::NO_CONTENT)
+            .headers(set_cookie.iter())
+            .body(Body::empty())
+            // .header(header::CONTENT_TYPE, header::APPLICATION_JSON)
+            // .body(Body::from(serialized))
             .unwrap()
     }
 }

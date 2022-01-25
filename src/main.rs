@@ -1,3 +1,4 @@
+use log::Level;
 use madome_auth::RootRegistry;
 use sai::System;
 use tokio::signal;
@@ -6,7 +7,7 @@ use tokio::signal;
 async fn main() {
     println!("Hello, world!");
 
-    simple_logger::init().unwrap();
+    simple_logger::init_with_level(Level::Debug).unwrap();
 
     let mut system = System::<RootRegistry>::new();
 

@@ -1,3 +1,5 @@
+use hyper::{Body, Response, StatusCode};
+
 use crate::{
     command::{get_user_info, random_code, send_email},
     repository::authcode_repository,
@@ -57,44 +59,52 @@ pub enum UseCaseError {
     CreateAuthcode(#[from] create_authcode::Error),
 }
 
-/* from_another_error![
-    (UseCase, CheckAccessToken, check_access_token::Error),
-    (UseCase, CheckAuthcode, check_authcode::Error),
-    (UseCase, CheckTokenPair, check_token_pair::Error),
-];
-
-#[macro_export]
-macro_rules! from_another_error {
-    ($(($first_member:ident, $second_member:ident, $from:ty)),*,) => {
-        $(
-            impl From<$from> for Error {
-                fn from(error: $from) -> Self {
-                    Self::$first_member($first_member::$second_member(error))
-                }
-            }
-        )*
-    };
-} */
-
-// TODO: 나중에 에러 핸들링 레이어 구현부 쪽에서 처리하자
-/* impl From<Error> for Response<Body> {
+impl From<Error> for Response<Body> {
     fn from(error: Error) -> Self {
+        use crate::msg::Error::*;
+        use check_access_token::Error::*;
+        use check_authcode::Error::*;
+        use check_refresh_token::Error::*;
+        use check_token_pair::Error::*;
+        use Error::*;
+        use UseCaseError::*;
+
+        let response = Response::builder();
+
+        // TODO: 복잡해지면 분리하자
         match error {
-            Error::NotFound => not_found(),
-            Error::JsonDeserialize(_e) => bad_request(),
-            Error::ReadChunksFromBody(_e) => internal_server_error(),
+            Msg(JsonDeserializePayload(err)) => response
+                .status(StatusCode::BAD_REQUEST)
+                .body(err.to_string().into()),
+
+            Msg(err @ NotFound) => response
+                .status(StatusCode::NOT_FOUND)
+                .body(err.to_string().into()),
+
+            UseCase(CheckAccessToken(err @ PermissionDenied)) => response
+                .status(StatusCode::FORBIDDEN)
+                .body(err.to_string().into()),
+
+            UseCase(CheckAccessToken(err @ UnauthorizedAccessToken)) => response
+                .status(StatusCode::UNAUTHORIZED)
+                .body(err.to_string().into()),
+
+            UseCase(CheckRefreshToken(err @ UnauthorizedRefreshToken)) => response
+                .status(StatusCode::UNAUTHORIZED)
+                .body(err.to_string().into()),
+
+            UseCase(CheckTokenPair(err @ InvalidTokenPair)) => response
+                .status(StatusCode::UNAUTHORIZED)
+                .body(err.to_string().into()),
+
+            UseCase(CheckAuthcode(err @ InvalidAuthcode)) => response
+                .status(StatusCode::NOT_FOUND)
+                .body(err.to_string().into()),
+
+            err => response
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(err.to_string().into()),
         }
+        .unwrap()
     }
-} */
-/*
-fn not_found() -> Response<Body> {
-    Response::builder().status(404).body(Body::empty()).unwrap()
 }
-
-fn bad_request() -> Response<Body> {
-    Response::builder().status(400).body(Body::empty()).unwrap()
-}
-
-fn internal_server_error() -> Response<Body> {
-    Response::builder().status(500).body(Body::empty()).unwrap()
-} */

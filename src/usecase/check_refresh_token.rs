@@ -9,7 +9,10 @@ pub struct Model {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum Error {}
+pub enum Error {
+    #[error("Unauthorized")]
+    UnauthorizedRefreshToken,
+}
 
 impl From<Error> for crate::Error {
     fn from(err: Error) -> Self {
@@ -22,7 +25,10 @@ pub async fn execute(
     // command: Arc<CommandSet>,
     secret_key: &str,
 ) -> crate::Result<Model> {
-    let token_data = RefreshToken::deserialize(&refresh_token, secret_key)?.claims;
+    let token_data = match RefreshToken::deserialize(&refresh_token, secret_key) {
+        Some(r) => r.claims,
+        None => return Err(Error::UnauthorizedRefreshToken.into()),
+    };
 
     Ok(Model { token: token_data })
 }

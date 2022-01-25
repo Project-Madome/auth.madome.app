@@ -35,7 +35,7 @@ impl ComponentLifecycle for SendEmail {
                 .expect("delete email template");
         }
 
-        const AUTHCODE_TEMPLATE: &str = r#"<!DOCTYPE html><html><head><title>Madome</title><meta charset=utf-8><meta name="description"content="MadomeAuthCode"><meta http-equiv="cache-control"content="no-cache"><meta name="viewport"content="width=device-width,user-scalable=no,initial-scale=1,maximum-scale=1"><linkh ref="https://fonts.googleapis.com/css?family=Exo:300,600"rel="stylesheet"></head><body><div id="container"><span id="server">MadomeAuthCode</span><hr><div id="text">{{authcode}}</div><br/><div id="smallText">or</div><br/><div id="openurl"><a href="madome:///auth?value={{authcode}}">OpeninMadome</a></div></div></body></html><style>a,a:visited{color:currentColor}*{font-family:Exo,'Noto Sans',Ubuntu,Roboto,sans-serif;font-weight:300}a{text-decoration:underline}hr{width:10%;border-style:solid;border-color:#000;border-width:.5px;margin:25px auto}#container{position:absolute;text-align:center;top:100px;margin:20px;left:0;right:0}#text{font-size:3rem;font-weight:600;color:#444}#smallText{font-size:0.8rem;font-weight:100;color:#333}#openurl{font-size:1rem;font-weight:400;color:#555}#server{font-size:0.9rem;color:#666}</style>"#;
+        const AUTHCODE_TEMPLATE: &str = r#"<!DOCTYPE html><html><head><title>Madome</title><meta charset=utf-8><meta name="description"content="Madome Authcode"><meta http-equiv="cache-control"content="no-cache"><meta name="viewport"content="width=device-width,user-scalable=no,initial-scale=1,maximum-scale=1"><linkh ref="https://fonts.googleapis.com/css?family=Exo:300,600"rel="stylesheet"></head><body><div id="container"><span id="server">Madome Authcode</span><hr><div id="text">{{authcode}}</div><br/><div id="smallText">or</div><br/><div id="openurl"><a href="madome:///auth?value={{authcode}}">Open in Madome</a></div></div></body></html><style>a,a:visited{color:currentColor}*{font-family:Exo,'Noto Sans',Ubuntu,Roboto,sans-serif;font-weight:300}a{text-decoration:underline}hr{width:10%;border-style:solid;border-color:#000;border-width:.5px;margin:25px auto}#container{position:absolute;text-align:center;top:100px;margin:20px;left:0;right:0}#text{font-size:3rem;font-weight:600;color:#444}#smallText{font-size:0.8rem;font-weight:100;color:#333}#openurl{font-size:1rem;font-weight:400;color:#555}#server{font-size:0.9rem;color:#666}</style>"#;
 
         self.aws_ses()
             .create_email_template()
@@ -95,7 +95,7 @@ impl Command<(String, String), ()> for SendEmail {
             .content(Self::authcode_template(&content))
             .send()
             .await
-            .map_err(Error::AwsSes)?;
+            .map_err(|e| Error::AwsSes(Box::new(e)))?;
 
         Ok(())
     }
@@ -104,7 +104,7 @@ impl Command<(String, String), ()> for SendEmail {
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("{0}")]
-    AwsSes(#[from] SdkError<SendEmailError>),
+    AwsSes(#[from] Box<SdkError<SendEmailError>>),
 }
 
 impl From<Error> for crate::Error {

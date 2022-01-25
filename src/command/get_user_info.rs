@@ -66,7 +66,7 @@ pub mod tests {
     impl Command<String, UserInfo> for GetUserInfo {
         type Error = crate::Error;
 
-        async fn execute(&self, user_id_or_email: String) -> Result<UserInfo, Self::Error> {
+        async fn execute(&self, _user_id_or_email: String) -> Result<UserInfo, Self::Error> {
             unimplemented!()
         }
     }

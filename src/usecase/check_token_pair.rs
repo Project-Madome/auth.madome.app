@@ -40,7 +40,7 @@ pub struct Model {
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("")]
+    #[error("Invalid token pair")]
     InvalidTokenPair,
 }
 

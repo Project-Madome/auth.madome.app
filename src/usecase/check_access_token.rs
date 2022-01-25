@@ -47,7 +47,9 @@ impl From<Model> for Response<Body> {
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("")]
+    #[error("Unauthorized")]
+    UnauthorizedAccessToken,
+    #[error("Permission denied")]
     PermissionDenied,
 }
 
@@ -66,7 +68,10 @@ pub async fn execute(
     command: Arc<CommandSet>,
     secret_key: &str,
 ) -> crate::Result<Model> {
-    let token_data = AccessToken::deserialize(&access_token, secret_key, validate_exp)?.claims;
+    let token_data = match AccessToken::deserialize(&access_token, secret_key, validate_exp) {
+        Some(r) => r.claims,
+        None => return Err(Error::UnauthorizedAccessToken.into()),
+    };
 
     if let Some(minimum_role) = minimum_role {
         let user = command.get_user_info(token_data.user_id.clone()).await?;

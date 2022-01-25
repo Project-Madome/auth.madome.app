@@ -43,10 +43,7 @@ pub async fn execute(
 ) -> crate::Result<Model> {
     let code = command.random_code().await?;
 
-    let authcode = Authcode {
-        user_email: user_email.clone(),
-        code: code.clone(),
-    };
+    let authcode = Authcode::new(user_email.clone(), code.clone());
 
     let _ = repository.authcode().add(authcode).await?;
 

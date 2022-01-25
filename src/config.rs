@@ -12,7 +12,7 @@ where
     var.parse().expect("Please set dotenv to valid value")
 }
 
-#[derive(Component)]
+#[derive(Debug, Component)]
 #[lifecycle]
 pub struct Config {
     port: Option<u16>,
@@ -37,6 +37,8 @@ impl ComponentLifecycle for Config {
 
         self.aws_config
             .replace(aws_config::from_env().region("us-east-1").load().await);
+
+        log::info!("Config {:?}", self);
     }
 }
 

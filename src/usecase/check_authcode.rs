@@ -3,7 +3,7 @@ use std::sync::Arc;
 use serde::Deserialize;
 
 use crate::{
-    error::{RepositoryError, UseCaseError},
+    error::UseCaseError,
     repository::{r#trait::AuthcodeRepository, RepositorySet},
 };
 
@@ -18,7 +18,7 @@ pub struct Model {
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("")]
+    #[error("Invalid authcode")]
     InvalidAuthcode,
 }
 
@@ -35,7 +35,7 @@ pub async fn execute(
     let maybe_authcode = repository.authcode().pop(&code).await?;
 
     match maybe_authcode {
-        Some(authcode) => Ok(Model {
+        Some(authcode) if !authcode.expired() => Ok(Model {
             user_email: authcode.user_email,
         }),
         _ => Err(Error::InvalidAuthcode.into()),
