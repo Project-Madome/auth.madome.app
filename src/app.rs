@@ -118,7 +118,7 @@ async fn service(
     }
     .inspect_ok(|res| {
         log::info!(
-            "HTTP Response {} {} {} {}",
+            "HTTP Response {} {} {} {}ms",
             req_method,
             req_uri,
             res.status(),
