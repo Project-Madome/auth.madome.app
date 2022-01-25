@@ -5,8 +5,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "\n";
-
 VERSION="$(git log --pretty=format:"%h" -1)"
 
 github-release -v download \
