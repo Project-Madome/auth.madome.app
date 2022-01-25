@@ -38,7 +38,7 @@ impl ComponentLifecycle for Config {
         self.aws_config
             .replace(aws_config::from_env().region("us-east-1").load().await);
 
-        log::info!("Config {:?}", self);
+        log::info!("{:?}", self);
     }
 }
 

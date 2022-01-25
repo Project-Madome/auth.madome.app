@@ -1,6 +1,7 @@
 use std::{convert::TryFrom, sync::Arc};
 
 use hyper::{Body, Request, Response, StatusCode};
+use serde::Serialize;
 
 use crate::{
     command::CommandSet, constant::http::cookie::MADOME_ACCESS_TOKEN, entity::token::AccessToken,
@@ -37,10 +38,21 @@ pub struct Model {
 }
 
 impl From<Model> for Response<Body> {
-    fn from(_: Model) -> Self {
+    fn from(model: Model) -> Self {
+        #[derive(Serialize)]
+        struct Output {
+            user_id: String,
+        }
+
+        let output = Output {
+            user_id: model.token.user_id,
+        };
+
+        let serialized = serde_json::to_string(&output).expect("json serialize");
+
         Response::builder()
-            .status(StatusCode::NO_CONTENT)
-            .body(Body::empty())
+            .status(StatusCode::OK)
+            .body(serialized.into())
             .unwrap()
     }
 }
