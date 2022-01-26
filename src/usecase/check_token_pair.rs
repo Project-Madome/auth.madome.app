@@ -67,8 +67,7 @@ pub async fn execute(
         command,
         secret_key,
     )
-    .await?
-    .token;
+    .await?;
 
     let refresh_token =
         check_refresh_token::execute(check_refresh_token::Payload { refresh_token }, secret_key)
