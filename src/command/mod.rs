@@ -24,6 +24,7 @@ pub mod r#trait {
     }
 }
 
+#[cfg_attr(test, derive(Default))]
 #[derive(Component)]
 pub struct CommandSet {
     #[cfg(not(test))]
@@ -34,8 +35,13 @@ pub struct CommandSet {
     #[injected]
     get_user_info: Injected<tests::GetUserInfo>,
 
+    #[cfg(not(test))]
     #[injected]
     random_code: Injected<RandomCode>,
+
+    #[cfg(test)]
+    #[injected]
+    random_code: Injected<tests::RandomCode>,
 
     #[cfg(not(test))]
     #[injected]
@@ -62,56 +68,16 @@ impl CommandSet {
 
 #[cfg(test)]
 pub mod tests {
+
+    use sai::Injected;
+
     pub use super::get_user_info::tests::*;
+    pub use super::random_code::tests::*;
     pub use super::send_email::tests::*;
-}
 
-/* macro_rules! command_traits {
-    ($name:tt, [$($generic:tt),+]) => {
-        #[async_trait::async_trait]
-        pub trait $name<$($generic,)* R> {
-            type Error;
-
-            async fn execute($(_: $generic,)*) -> Result<R, Self::Error>;
+    impl super::CommandSet {
+        pub fn set_get_user_info(&mut self, r: GetUserInfo) {
+            self.get_user_info = Injected::new(r);
         }
-    };
-}
-
-command_traits!(Command1, [T]);
-command_traits!(Command2, [T1, T2]);
-command_traits!(Command3, [T1, T2, T3]);
-command_traits!(Command4, [T1, T2, T3, T4]);
-command_traits!(Command5, [T1, T2, T3, T4, T5]);
-
-/// command(T1 -> T2 -> R, fn)
-macro_rules! command {
-    ($name:tt, $arg1:ty => $r:ty, $expr:expr) => {
-        pub struct $name;
-
-        #[async_trait::async_trait]
-        impl Command1<$arg1, $r> for $name {
-            type Error = crate::Error;
-
-            async fn execute(arg1: $arg1) -> Result<$r, Self::Error> {
-                ($expr(arg1)).await
-            }
-        }
-    };
-}
-
-command! {
-    GetUserInfo,
-    &str => crate::json::user::UserInfo,
-    |email: &str| async {
-        Ok(crate::json::user::UserInfo {
-            id: "",
-            email: "",
-            role: 0,
-        })
     }
 }
-
-async fn test() {
-    GetUserInfo::execute("arg0").await
-}
- */

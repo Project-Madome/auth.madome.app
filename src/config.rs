@@ -19,8 +19,8 @@ pub struct Config {
 
     madome_user_server: Option<String>,
 
-    secret_key: Option<String>,
-
+    // AWS_ACCESS_KEY_ID=
+    // AWS_SECRET_ACCESS_KEY=
     aws_config: Option<aws_config::Config>,
 }
 
@@ -32,8 +32,6 @@ impl ComponentLifecycle for Config {
         self.port.replace(env("PORT"));
 
         self.madome_user_server.replace(env("MADOME_USER_SERVER"));
-
-        self.secret_key.replace(env("SECRET_KEY"));
 
         self.aws_config
             .replace(aws_config::from_env().region("us-east-1").load().await);
@@ -49,10 +47,6 @@ impl Config {
 
     pub fn madome_user_server(&self) -> &str {
         self.madome_user_server.as_ref().unwrap()
-    }
-
-    pub fn secret_key(&self) -> &str {
-        self.secret_key.as_ref().unwrap()
     }
 
     pub fn aws_config(&self) -> &aws_config::Config {

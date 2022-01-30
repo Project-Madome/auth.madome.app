@@ -1,3 +1,5 @@
+extern crate util;
+
 mod app;
 mod command;
 mod config;
@@ -11,23 +13,12 @@ mod msg;
 mod registry;
 mod repository;
 mod usecase;
-mod utils;
 
 pub use registry::RootRegistry;
 
 use error::Error;
 
 type Result<T> = std::result::Result<T, Error>;
-
-#[macro_export]
-macro_rules! tri {
-    ($expr:expr) => {
-        match $expr {
-            Ok(msg) => msg,
-            Err(error) => return error.into(),
-        }
-    };
-}
 
 /* #[async_trait::async_trait]
 impl<A, B> AsyncTryInto<A> for B

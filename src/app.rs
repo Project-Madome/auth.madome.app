@@ -9,6 +9,7 @@ use hyper::{
 };
 use inspect::{Inspect, InspectOk};
 use sai::{Component, ComponentLifecycle, Injected};
+use util::r#async::AsyncTryFrom;
 
 use crate::command::CommandSet;
 use crate::config::Config;
@@ -18,7 +19,6 @@ use crate::repository::RepositorySet;
 use crate::usecase::{
     check_access_token, check_authcode, check_token_pair, create_authcode, create_token_pair,
 };
-use crate::utils::r#async::AsyncTryFrom;
 
 #[derive(Component)]
 pub struct Resolver {
@@ -27,16 +27,15 @@ pub struct Resolver {
 
     #[injected]
     command: Injected<CommandSet>,
-
-    #[injected]
-    config: Injected<Config>,
+    /* #[injected]
+    config: Injected<Config>, */
 }
 
 impl Resolver {
     async fn resolve(&self, msg: Msg) -> crate::Result<Model> {
         let repository = Arc::clone(&self.repository);
         let command = Arc::clone(&self.command);
-        let config = Arc::clone(&self.config);
+        // let config = Arc::clone(&self.config);
 
         let model = match msg {
             Msg::CreateAuthcode(payload) => create_authcode::execute(payload, repository, command)
@@ -44,25 +43,24 @@ impl Resolver {
                 .into(),
 
             Msg::CreateTokenPair(payload) => {
-                let model = check_authcode::execute(payload.clone(), repository).await?;
+                let model = check_authcode::execute(payload.clone(), repository.clone()).await?;
 
-                create_token_pair::execute(model.into(), command, config.secret_key())
+                create_token_pair::execute(model.into(), repository, command)
                     .await?
                     .into()
             }
 
             Msg::RefreshTokenPair(payload) => {
                 let user_id =
-                    check_token_pair::execute(payload, command.clone(), config.secret_key())
-                        .await?;
+                    check_token_pair::execute(payload, repository.clone(), command.clone()).await?;
 
-                create_token_pair::execute(user_id.into(), command, config.secret_key())
+                create_token_pair::execute(user_id.into(), repository, command)
                     .await?
                     .into()
             }
 
             Msg::CheckAccessToken(payload) => {
-                check_access_token::execute(payload, command, config.secret_key())
+                check_access_token::execute(payload, repository, command)
                     .await?
                     .into()
             }

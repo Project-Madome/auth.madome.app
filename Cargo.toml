@@ -27,3 +27,5 @@ inspect = { git = "https://github.com/syrflover/inspect-rs" }
 openssl = { version = "0.10.38", features = ["vendored"] }
 util = { path = "../util" }
 base64 = "0.13.0"
+ring = "0.16.20"
+querystring = "1.1.0"

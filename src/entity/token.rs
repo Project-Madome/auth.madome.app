@@ -3,9 +3,53 @@ use jsonwebtoken::TokenData;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::utils::jwt;
+pub const ACCESS_TOKEN_EXP: i64 = 3600 * 4;
+pub const REFRESH_TOKEN_EXP: i64 = 3600 * 24 * 7;
 
-#[derive(Clone)]
+mod jwt {
+    use jsonwebtoken::{DecodingKey, EncodingKey, Header, TokenData, Validation};
+    use serde::de::DeserializeOwned;
+    use serde::Serialize;
+
+    /*
+    #[derive(Debug, Serialize, Deserialize)]
+    struct Claims {
+        aud: String,         // Optional. Audience
+        exp: usize,          // Required (validate_exp defaults to true in validation). Expiration time (as UTC timestamp)
+        iat: usize,          // Optional. Issued at (as UTC timestamp)
+        iss: String,         // Optional. Issuer
+        nbf: usize,          // Optional. Not Before (as UTC timestamp)
+        sub: String,         // Optional. Subject (whom token refers to)
+    }
+    */
+
+    pub fn serialize<Claims: Serialize>(
+        claims: &Claims,
+        secret_key: &str,
+    ) -> Result<String, jsonwebtoken::errors::Error> {
+        let header = Header::default();
+        let encoding_key = EncodingKey::from_secret(secret_key.as_ref());
+
+        jsonwebtoken::encode(&header, claims, &encoding_key)
+    }
+
+    pub fn deserialize<Claims: DeserializeOwned>(
+        token: &str,
+        secret_key: &str,
+        validate_exp: bool,
+    ) -> Result<TokenData<Claims>, jsonwebtoken::errors::Error> {
+        let decoding_key = DecodingKey::from_secret(secret_key.as_ref());
+        let validation = Validation {
+            validate_exp,
+            ..Default::default()
+        };
+
+        jsonwebtoken::decode::<Claims>(token, &decoding_key, &validation)
+    }
+}
+
+#[cfg_attr(test, derive(Default))]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub id: String,
     pub user_id: String,
@@ -20,6 +64,11 @@ pub struct AccessToken {
 
     pub id: String,
     pub user_id: String,
+
+    /// placeholder for access token
+    ///
+    /// serialize할 때 이게 있으면 access_token이라는 증거
+    pub _a: bool,
 }
 
 impl AccessToken {
@@ -29,6 +78,10 @@ impl AccessToken {
         validate_exp: bool,
     ) -> Option<TokenData<Self>> {
         Token::deserialize(access_token, secret_key, validate_exp)
+    }
+
+    pub fn deserialize_payload(access_token: &str) -> Option<Self> {
+        Token::deserialize_payload(access_token)
     }
 }
 
@@ -40,9 +93,10 @@ impl From<Token> for AccessToken {
             sub: "madome access token".to_string(),
             iss: "madome.app".to_string(),
             iat: issued_at,
-            exp: issued_at + 3600 * 4,
+            exp: issued_at + ACCESS_TOKEN_EXP,
             id,
             user_id,
+            _a: true,
         }
     }
 }
@@ -56,25 +110,35 @@ pub struct RefreshToken {
 
     pub id: String,
     pub user_id: String,
+
+    /// placeholder for refresh token
+    ///
+    /// serialize할 때 이게 있으면 refresh_token이라는 증거
+    pub _r: bool,
 }
 
 impl RefreshToken {
     pub fn deserialize(refresh_token: &str, secret_key: &str) -> Option<TokenData<Self>> {
         Token::deserialize(refresh_token, secret_key, true)
     }
+
+    pub fn deserialize_payload(refresh_token: &str) -> Option<Self> {
+        Token::deserialize_payload(refresh_token)
+    }
 }
 
 impl From<Token> for RefreshToken {
     fn from(Token { id, user_id }: Token) -> Self {
-        let issued_at = 0;
+        let issued_at = Utc::now().timestamp();
 
         Self {
             sub: "madome refresh token".to_string(),
             iss: "madome.app".to_string(),
             iat: issued_at,
-            exp: issued_at + 3600 * 24 * 7,
+            exp: issued_at + REFRESH_TOKEN_EXP,
             id,
             user_id,
+            _r: true,
         }
     }
 }
@@ -97,11 +161,21 @@ impl Token {
         Ok((access_token, refresh_token))
     }
 
-    pub fn deserialize<T: DeserializeOwned>(
-        token: &str,
-        secret_key: &str,
-        validate_exp: bool,
-    ) -> Option<TokenData<T>> {
+    pub fn deserialize<T>(token: &str, secret_key: &str, validate_exp: bool) -> Option<TokenData<T>>
+    where
+        T: DeserializeOwned,
+    {
         jwt::deserialize::<T>(token, secret_key, validate_exp).ok()
+    }
+
+    pub fn deserialize_payload<T>(token: &str) -> Option<T>
+    where
+        T: DeserializeOwned,
+    {
+        token.split('.').nth(1).and_then(|st| {
+            base64::decode_config(st, base64::URL_SAFE_NO_PAD)
+                .ok()
+                .and_then(|p| serde_json::from_slice(&p).ok())
+        })
     }
 }

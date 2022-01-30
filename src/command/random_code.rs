@@ -33,3 +33,22 @@ pub mod r#trait {
 
     pub trait RandomCode: Command<(), String, Error = crate::Error> {}
 }
+
+#[cfg(test)]
+pub mod tests {
+    use sai::Component;
+
+    use crate::command::r#trait::Command;
+
+    #[derive(Default, Component)]
+    pub struct RandomCode;
+
+    #[async_trait::async_trait]
+    impl Command<(), String> for RandomCode {
+        type Error = crate::Error;
+
+        async fn execute(&self, _: ()) -> Result<String, Self::Error> {
+            unimplemented!()
+        }
+    }
+}

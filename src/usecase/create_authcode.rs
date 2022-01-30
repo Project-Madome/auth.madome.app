@@ -21,7 +21,7 @@ pub struct Model;
 impl From<Model> for Response<Body> {
     fn from(_: Model) -> Self {
         Response::builder()
-            .status(StatusCode::NO_CONTENT)
+            .status(StatusCode::CREATED)
             .body(Body::empty())
             .unwrap()
     }
@@ -50,4 +50,9 @@ pub async fn execute(
     command.send_email(user_email, code).await?;
 
     Ok(Model)
+}
+
+#[cfg(test)]
+mod tests {
+    // TODO: success(send_email이 authcode를 반환하게 하고 그걸 random_code에 넣은 값과 비교하자)
 }

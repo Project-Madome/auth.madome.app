@@ -1,28 +1,41 @@
-pub mod authcode_repository;
+mod inmemory;
+pub mod r#trait;
+
+pub use inmemory::*;
 
 use std::sync::Arc;
 
-pub use authcode_repository::InMemoryAuthcodeRepository;
-use sai::{Component, ComponentLifecycle, Injected};
+use sai::{Component, Injected};
 
-pub mod r#trait {
-    pub use super::authcode_repository::r#trait::AuthcodeRepository;
-}
-
+#[cfg_attr(test, derive(Default))]
 #[derive(Component)]
-#[lifecycle]
 pub struct RepositorySet {
     #[injected]
     authcode_repository: Injected<InMemoryAuthcodeRepository>,
+
+    #[injected]
+    secret_key_repository: Injected<InMemorySecretKeyRepository>,
 }
 
 impl RepositorySet {
     pub fn authcode(&self) -> Arc<impl r#trait::AuthcodeRepository> {
         Arc::clone(&self.authcode_repository)
     }
+
+    pub fn secret_key(&self) -> Arc<impl r#trait::SecretKeyRepository> {
+        Arc::clone(&self.secret_key_repository)
+    }
 }
 
-#[async_trait::async_trait]
-impl ComponentLifecycle for RepositorySet {
-    async fn start(&mut self) {}
+#[cfg(test)]
+mod tests {
+    /* use sai::Injected;
+
+    use super::InMemorySecretKeyRepository;
+
+    impl super::RepositorySet {
+        pub fn set_secret_key(&mut self, r: Injected<InMemorySecretKeyRepository>) {
+            self.secret_key_repository = r;
+        }
+    } */
 }

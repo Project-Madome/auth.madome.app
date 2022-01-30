@@ -2,7 +2,6 @@ use hyper::{Body, Response, StatusCode};
 
 use crate::{
     command::{get_user_info, random_code, send_email},
-    repository::authcode_repository,
     usecase::{
         check_access_token, check_authcode, check_refresh_token, check_token_pair, create_authcode,
         create_token_pair,
@@ -28,10 +27,7 @@ pub enum Error {
 type Msg = crate::msg::Error;
 
 #[derive(Debug, thiserror::Error)]
-pub enum RepositoryError {
-    #[error("Authcode: {0}")]
-    Authcode(#[from] authcode_repository::Error),
-}
+pub enum RepositoryError {}
 
 #[derive(Debug, thiserror::Error)]
 pub enum CommandError {

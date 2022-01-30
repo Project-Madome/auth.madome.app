@@ -3,13 +3,9 @@ use std::convert::TryInto;
 use hyper::{Body, Method, Request};
 use serde::de::DeserializeOwned;
 
-use crate::{
-    usecase::{check_access_token, check_authcode, check_token_pair, create_authcode},
-    utils::{
-        r#async::{AsyncTryFrom, AsyncTryInto},
-        ReadChunks,
-    },
-};
+use util::{r#async::AsyncTryFrom, ReadChunks};
+
+use crate::usecase::{check_access_token, check_authcode, check_token_pair, create_authcode};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -41,9 +37,13 @@ impl AsyncTryFrom<Request<Body>> for Msg {
 
         let msg = match (method, path) {
             (Method::GET, "/auth/token") => Msg::CheckAccessToken(request.try_into()?),
-            (Method::POST, "/auth/token") => Msg::CreateTokenPair(request.async_try_into().await?),
+            (Method::POST, "/auth/token") => {
+                Msg::CreateTokenPair(Wrap::async_try_from(request).await?.inner())
+            }
             (Method::PATCH, "/auth/token") => Msg::RefreshTokenPair(request.try_into()?),
-            (Method::POST, "/auth/code") => Msg::CreateAuthcode(request.async_try_into().await?),
+            (Method::POST, "/auth/code") => {
+                Msg::CreateAuthcode(Wrap::async_try_from(request).await?.inner())
+            }
             _ => return Err(Error::NotFound.into()),
         };
 
@@ -51,8 +51,16 @@ impl AsyncTryFrom<Request<Body>> for Msg {
     }
 }
 
+pub struct Wrap<P>(pub P);
+
+impl<P> Wrap<P> {
+    pub fn inner(self) -> P {
+        self.0
+    }
+}
+
 #[async_trait::async_trait]
-impl<P> AsyncTryFrom<Request<Body>> for P
+impl<P> AsyncTryFrom<Request<Body>> for Wrap<P>
 where
     P: DeserializeOwned,
 {
@@ -64,6 +72,6 @@ where
         let payload =
             serde_json::from_slice::<P>(&chunks).map_err(Error::JsonDeserializePayload)?;
 
-        Ok(payload)
+        Ok(Wrap(payload))
     }
 }

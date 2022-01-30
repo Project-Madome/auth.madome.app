@@ -2,18 +2,19 @@ use std::{collections::HashMap, sync::Mutex};
 
 use sai::Component;
 
-use crate::entity::authcode::Authcode;
+use crate::{entity::authcode::Authcode, repository::r#trait::AuthcodeRepository};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {}
 
+#[cfg_attr(test, derive(Default))]
 #[derive(Component)]
 pub struct InMemoryAuthcodeRepository {
     inner: Mutex<HashMap<String, Authcode>>,
 }
 
 #[async_trait::async_trait]
-impl r#trait::AuthcodeRepository for InMemoryAuthcodeRepository {
+impl AuthcodeRepository for InMemoryAuthcodeRepository {
     async fn pop(&self, code: &str) -> crate::Result<Option<Authcode>> {
         let mut inner = self.inner.lock().unwrap();
 
@@ -28,16 +29,5 @@ impl r#trait::AuthcodeRepository for InMemoryAuthcodeRepository {
         inner.insert(authcode.code.clone(), authcode);
 
         Ok(true)
-    }
-}
-
-pub mod r#trait {
-    use crate::entity::authcode::Authcode;
-
-    #[async_trait::async_trait]
-    pub trait AuthcodeRepository: Send + Sync {
-        async fn pop(&self, code: &str) -> crate::Result<Option<Authcode>>;
-
-        async fn add(&self, authcode: Authcode) -> crate::Result<bool>;
     }
 }

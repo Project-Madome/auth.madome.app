@@ -57,8 +57,16 @@ pub mod tests {
 
     use super::r#trait;
 
-    #[derive(Component)]
-    pub struct GetUserInfo;
+    #[derive(Component, Default)]
+    pub struct GetUserInfo {
+        users: Vec<UserInfo>,
+    }
+
+    impl From<UserInfo> for GetUserInfo {
+        fn from(user: UserInfo) -> Self {
+            Self { users: vec![user] }
+        }
+    }
 
     impl r#trait::GetUserInfo for GetUserInfo {}
 
@@ -66,8 +74,13 @@ pub mod tests {
     impl Command<String, UserInfo> for GetUserInfo {
         type Error = crate::Error;
 
-        async fn execute(&self, _user_id_or_email: String) -> Result<UserInfo, Self::Error> {
-            unimplemented!()
+        async fn execute(&self, id_or_email: String) -> Result<UserInfo, Self::Error> {
+            let user = self
+                .users
+                .iter()
+                .find(|user| user.id == id_or_email || user.email == id_or_email)
+                .unwrap();
+            Ok(user.clone())
         }
     }
 }

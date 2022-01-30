@@ -2,12 +2,13 @@ use std::{convert::TryFrom, sync::Arc};
 
 use hyper::{Body, Request};
 use serde::Deserialize;
+use util::http::Cookie;
 
 use crate::{
     command::CommandSet,
     constant::http::cookie::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN},
     error::UseCaseError,
-    utils::http::Cookie,
+    repository::RepositorySet,
 };
 
 use super::{check_access_token, check_refresh_token};
@@ -34,6 +35,7 @@ impl TryFrom<Request<Body>> for Payload {
     }
 }
 
+#[derive(Debug)]
 pub struct Model {
     pub user_id: String,
 }
@@ -55,8 +57,8 @@ pub async fn execute(
         access_token,
         refresh_token,
     }: Payload,
+    repository: Arc<RepositorySet>,
     command: Arc<CommandSet>,
-    secret_key: &str,
 ) -> crate::Result<Model> {
     let access_token = check_access_token::execute(
         check_access_token::Payload {
@@ -64,21 +66,163 @@ pub async fn execute(
             minimum_role: None,
             validate_exp: false,
         },
+        repository.clone(),
         command,
-        secret_key,
     )
     .await?;
 
     let refresh_token =
-        check_refresh_token::execute(check_refresh_token::Payload { refresh_token }, secret_key)
-            .await?
-            .token;
+        check_refresh_token::execute(check_refresh_token::Payload { refresh_token }, repository)
+            .await?;
 
-    if access_token.id != refresh_token.id || access_token.user_id != refresh_token.user_id {
+    if access_token.token_id != refresh_token.token_id
+        || access_token.user_id != refresh_token.user_id
+    {
         return Err(Error::InvalidTokenPair.into());
     }
 
     Ok(Model {
         user_id: access_token.user_id,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use sai::{Component, System};
+    use util::{assert_debug, test_registry};
+    use uuid::Uuid;
+
+    use crate::{
+        command::CommandSet,
+        entity::token::Token,
+        repository::{r#trait::SecretKeyRepository, RepositorySet},
+        usecase::check_token_pair::{self, Payload},
+    };
+
+    #[tokio::test]
+    async fn success() {
+        let mut test = System::<TestRegistry>::new();
+
+        test.start().await;
+
+        test_registry!(
+        [repository: RepositorySet, command: CommandSet] ->
+        [secret_key: String, user_id: String, token: Token] ->
+        {
+            secret_key = "secret0382".to_string();
+            user_id = Uuid::new_v4().to_string();
+            token = Token::new(user_id.clone());
+
+            repository
+                .secret_key()
+                .add(&token.id, &secret_key)
+                .await
+                .unwrap();
+        },
+        {
+            let (access_token, refresh_token) = token.serialize(&secret_key).expect("serialize jwt");
+
+            let payload = Payload {
+                access_token,
+                refresh_token,
+            };
+
+            let r = check_token_pair::execute(payload, repository, command)
+                .await
+                .unwrap();
+
+            assert_eq!(r.user_id, user_id);
+        });
+    }
+
+    #[tokio::test]
+    async fn error_unauthorized_by_not_same_token_id() {
+        let mut test = System::<TestRegistry>::new();
+
+        test.start().await;
+
+        test_registry!(
+        [repository: RepositorySet, command: CommandSet] ->
+        [secret_key: String, user_id: String, a_token: Token, b_token: Token] ->
+        {
+            secret_key = "secret03223".to_string();
+            user_id = Uuid::new_v4().to_string();
+            a_token = Token::new(user_id.clone());
+            b_token = Token::new(user_id.clone());
+
+            a_token.id = "96e220fe-cb9b-40f5-9f88-0c023a349b59".to_string();
+            b_token.id = "d344c1db-8a6d-42d1-bc2d-d488ab8d46b6".to_string();
+
+            repository
+                .secret_key()
+                .add(&a_token.id, &secret_key)
+                .await
+                .unwrap();
+
+            repository
+                .secret_key()
+                .add(&b_token.id, &secret_key)
+                .await
+                .unwrap();
+        },
+        {
+            let (access_token, _) = a_token.serialize(&secret_key).expect("serialize jwt");
+            let (_, refresh_token) = b_token.serialize(&secret_key).expect("serialize jwt");
+
+            let payload = Payload {
+                access_token,
+                refresh_token,
+            };
+
+            let r = check_token_pair::execute(payload, repository, command)
+                .await
+                .expect_err("expected error, but returns ok");
+
+            assert_debug!(r, crate::Error::from(check_token_pair::Error::InvalidTokenPair));
+        });
+    }
+
+    #[tokio::test]
+    async fn error_unauthorized_by_not_same_user_id() {
+        let mut test = System::<TestRegistry>::new();
+
+        test.start().await;
+
+        test_registry!(
+        [repository: RepositorySet, command: CommandSet] ->
+        [secret_key: String, a_user_id: String, b_user_id: String, a_token: Token, b_token: Token] ->
+        {
+            secret_key = "secret03458".to_string();
+            a_user_id = "bf4cf9fe-961f-4aba-a11b-17cf43c7ed39".to_string();
+            b_user_id = "7a129706-4458-493c-a0b9-11f5a57fffa7".to_string();
+            a_token = Token::new(a_user_id.clone());
+            b_token = Token::new(b_user_id.clone());
+
+            b_token.id = a_token.id.clone();
+
+            // println!("{:?}", a_token);
+            // println!("{:?}", b_token);
+
+            repository
+                .secret_key()
+                .add(&a_token.id, &secret_key)
+                .await
+                .unwrap();
+        },
+        {
+            let (access_token, _) = a_token.serialize(&secret_key).expect("serialize jwt");
+            let (_, refresh_token) = b_token.serialize(&secret_key).expect("serialize jwt");
+
+            let payload = Payload {
+                access_token,
+                refresh_token,
+            };
+
+            let r = check_token_pair::execute(payload, repository, command)
+                .await
+                .expect_err("expected error, but returns ok");
+
+            assert_debug!(r, crate::Error::from(check_token_pair::Error::InvalidTokenPair));
+        });
+    }
 }

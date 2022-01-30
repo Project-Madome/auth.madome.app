@@ -26,30 +26,30 @@ impl ComponentLifecycle for SendEmail {
         self.aws_ses
             .replace(aws_sdk_sesv2::Client::new(self.config.aws_config()));
 
-        if self.has_template(AUTHCODE_TEMPLATE_NAME).await {
-            self.aws_ses()
-                .delete_email_template()
-                .template_name(AUTHCODE_TEMPLATE_NAME)
-                .send()
-                .await
-                .expect("delete email template");
-        }
-
-        const AUTHCODE_TEMPLATE: &str = r#"<!DOCTYPE html><html><head><title>Madome</title><meta charset=utf-8><meta name="description"content="Madome Authcode"><meta http-equiv="cache-control"content="no-cache"><meta name="viewport"content="width=device-width,user-scalable=no,initial-scale=1,maximum-scale=1"><linkh ref="https://fonts.googleapis.com/css?family=Exo:300,600"rel="stylesheet"></head><body><div id="container"><span id="server">Madome Authcode</span><hr><div id="text">{{authcode}}</div><br/><div id="smallText">or</div><br/><div id="openurl"><a href="madome:///auth?value={{authcode}}">Open in Madome</a></div></div></body></html><style>a,a:visited{color:currentColor}*{font-family:Exo,'Noto Sans',Ubuntu,Roboto,sans-serif;font-weight:300}a{text-decoration:underline}hr{width:10%;border-style:solid;border-color:#000;border-width:.5px;margin:25px auto}#container{position:absolute;text-align:center;top:100px;margin:20px;left:0;right:0}#text{font-size:3rem;font-weight:600;color:#444}#smallText{font-size:0.8rem;font-weight:100;color:#333}#openurl{font-size:1rem;font-weight:400;color:#555}#server{font-size:0.9rem;color:#666}</style>"#;
-
-        self.aws_ses()
-            .create_email_template()
+        if !self.has_template(AUTHCODE_TEMPLATE_NAME).await {
+            /* self.aws_ses()
+            .delete_email_template()
             .template_name(AUTHCODE_TEMPLATE_NAME)
-            .template_content(
-                EmailTemplateContent::builder()
-                    .subject("Authcode of madome.app")
-                    .html(AUTHCODE_TEMPLATE)
-                    .text("{{authcode}}")
-                    .build(),
-            )
             .send()
             .await
-            .expect("create email template");
+            .expect("delete email template"); */
+
+            const AUTHCODE_TEMPLATE: &str = r#"<!DOCTYPE html><html><head><title>Madome</title><meta charset=utf-8><meta name="description"content="Madome Authcode"><meta http-equiv="cache-control"content="no-cache"><meta name="viewport"content="width=device-width,user-scalable=no,initial-scale=1,maximum-scale=1"><linkh ref="https://fonts.googleapis.com/css?family=Exo:300,600"rel="stylesheet"></head><body><div id="container"><span id="server">Madome Authcode</span><hr><div id="text">{{authcode}}</div><br/><div id="smallText">or</div><br/><div id="openurl"><a href="madome:///auth?value={{authcode}}">Open in Madome</a></div></div></body></html><style>a,a:visited{color:currentColor}*{font-family:Exo,'Noto Sans',Ubuntu,Roboto,sans-serif;font-weight:300}a{text-decoration:underline}hr{width:10%;border-style:solid;border-color:#000;border-width:.5px;margin:25px auto}#container{position:absolute;text-align:center;top:100px;margin:20px;left:0;right:0}#text{font-size:3rem;font-weight:600;color:#444}#smallText{font-size:0.8rem;font-weight:100;color:#333}#openurl{font-size:1rem;font-weight:400;color:#555}#server{font-size:0.9rem;color:#666}</style>"#;
+
+            self.aws_ses()
+                .create_email_template()
+                .template_name(AUTHCODE_TEMPLATE_NAME)
+                .template_content(
+                    EmailTemplateContent::builder()
+                        .subject("Authcode of madome.app")
+                        .html(AUTHCODE_TEMPLATE)
+                        .text("{{authcode}}")
+                        .build(),
+                )
+                .send()
+                .await
+                .expect("create email template");
+        }
     }
 }
 
@@ -127,7 +127,7 @@ pub mod tests {
 
     use super::r#trait;
 
-    #[derive(Component)]
+    #[derive(Component, Default)]
     pub struct SendEmail;
 
     impl r#trait::SendEmail for SendEmail {}
