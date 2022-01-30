@@ -1,12 +1,9 @@
 use std::sync::Arc;
 
-use hyper::{Body, Response, StatusCode};
 use serde::Serialize;
-use util::http::{SetCookie, SetCookieOptions, SetHeaders};
 
 use crate::{
     command::CommandSet,
-    constant::http::cookie::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN},
     entity::{secret_key::SecretKey, token::Token},
     error::UseCaseError,
     repository::{r#trait::SecretKeyRepository, RepositorySet},
@@ -41,36 +38,6 @@ impl From<check_token_pair::Model> for Payload {
 pub struct Model {
     pub access_token: String,
     pub refresh_token: String,
-}
-
-impl From<Model> for Response<Body> {
-    fn from(
-        Model {
-            access_token,
-            refresh_token,
-        }: Model,
-    ) -> Self {
-        let set_cookie_options = SetCookieOptions::new().domain("madome.app").http_only(true);
-        let set_cookie = SetCookie::new()
-            .set(
-                MADOME_ACCESS_TOKEN,
-                access_token,
-                set_cookie_options.clone().max_age(3600 * 4),
-            )
-            .set(
-                MADOME_REFRESH_TOKEN,
-                refresh_token,
-                set_cookie_options.max_age(3600 * 24 * 7),
-            );
-
-        Response::builder()
-            .status(StatusCode::CREATED)
-            .headers(set_cookie.iter())
-            .body(Body::empty())
-            // .header(header::CONTENT_TYPE, header::APPLICATION_JSON)
-            // .body(Body::from(serialized))
-            .unwrap()
-    }
 }
 
 #[derive(Debug, thiserror::Error)]

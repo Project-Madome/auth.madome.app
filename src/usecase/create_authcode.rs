@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use hyper::{Body, Response, StatusCode};
 use serde::Deserialize;
 
 use crate::{
@@ -17,15 +16,6 @@ pub struct Payload {
 }
 
 pub struct Model;
-
-impl From<Model> for Response<Body> {
-    fn from(_: Model) -> Self {
-        Response::builder()
-            .status(StatusCode::CREATED)
-            .body(Body::empty())
-            .unwrap()
-    }
-}
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {}

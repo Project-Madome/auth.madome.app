@@ -1,6 +1,6 @@
 use std::{collections::HashMap, convert::TryFrom, sync::Arc};
 
-use hyper::{Body, Request, Response, StatusCode};
+use hyper::{Body, Request};
 use serde::Serialize;
 use util::{http::Cookie, ori};
 
@@ -45,17 +45,6 @@ pub struct Model {
     #[serde(skip_serializing)]
     pub token_id: String,
     pub user_id: String,
-}
-
-impl From<Model> for Response<Body> {
-    fn from(model: Model) -> Self {
-        let serialized = serde_json::to_string(&model).expect("json serialize");
-
-        Response::builder()
-            .status(StatusCode::OK)
-            .body(serialized.into())
-            .unwrap()
-    }
 }
 
 #[derive(Debug, thiserror::Error)]
