@@ -35,6 +35,8 @@ pub async fn execute(
 
     let authcode = Authcode::new(user_email.clone(), code.clone());
 
+    log::debug!("created authcode = {}", authcode.code);
+
     let _ = repository.authcode().add(authcode).await?;
 
     command.send_email(user_email, code).await?;

@@ -1,8 +1,8 @@
-use hyper::{Body, Response, StatusCode};
+use hyper::{header, Body, Response, StatusCode};
+use madome_sdk::auth::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
 use util::http::{SetCookie, SetCookieOptions, SetHeaders};
 
 use crate::{
-    constant::http::cookie::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN},
     into_model,
     usecase::{check_access_token, create_authcode, create_token_pair},
 };
@@ -42,6 +42,14 @@ impl From<create_token_pair::Model> for Response<Body> {
                 set_cookie_options.max_age(3600 * 24 * 7),
             );
 
+        log::debug!(
+            "set-cookie = {:?}",
+            set_cookie
+                .iter()
+                .map(|(a, b)| (a.to_string(), b.to_str().unwrap().to_string()))
+                .collect::<Vec<_>>()
+        );
+
         Response::builder()
             .status(StatusCode::CREATED)
             .headers(set_cookie.iter())
@@ -58,6 +66,7 @@ impl From<check_access_token::Model> for Response<Body> {
 
         Response::builder()
             .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "application/json")
             .body(serialized.into())
             .unwrap()
     }

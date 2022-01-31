@@ -1,12 +1,12 @@
 use std::{collections::HashMap, convert::TryFrom, sync::Arc};
 
 use hyper::{Body, Request};
+use madome_sdk::auth::MADOME_ACCESS_TOKEN;
 use serde::Serialize;
 use util::{http::Cookie, ori};
 
 use crate::{
     command::CommandSet,
-    constant::http::cookie::MADOME_ACCESS_TOKEN,
     entity::{secret_key::SecretKey, token::AccessToken},
     error::UseCaseError,
     repository::{r#trait::SecretKeyRepository, RepositorySet},

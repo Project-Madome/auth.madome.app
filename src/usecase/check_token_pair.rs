@@ -1,15 +1,11 @@
 use std::{convert::TryFrom, sync::Arc};
 
 use hyper::{Body, Request};
+use madome_sdk::auth::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
 use serde::Deserialize;
 use util::http::Cookie;
 
-use crate::{
-    command::CommandSet,
-    constant::http::cookie::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN},
-    error::UseCaseError,
-    repository::RepositorySet,
-};
+use crate::{command::CommandSet, error::UseCaseError, repository::RepositorySet};
 
 use super::{check_access_token, check_refresh_token};
 

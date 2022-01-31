@@ -3,7 +3,6 @@ extern crate util;
 mod app;
 mod command;
 mod config;
-mod constant;
 mod database;
 mod entity;
 mod error;

@@ -139,7 +139,7 @@ impl ComponentLifecycle for HttpServer {
 
         let port = self.config.port();
 
-        tokio::spawn(async move {
+        let t = tokio::spawn(async move {
             let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
             let svc = |resolver: Arc<Resolver>| async move {
@@ -157,6 +157,8 @@ impl ComponentLifecycle for HttpServer {
                 panic!("{:?}", err);
             }
         });
+
+        t.await.unwrap();
     }
 
     async fn stop(&mut self) {}

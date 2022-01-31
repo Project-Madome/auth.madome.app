@@ -35,6 +35,11 @@ impl AsyncTryFrom<Request<Body>> for Msg {
         let method = request.method().clone();
         let path = request.uri().path();
 
+        log::debug!("request headers = {:?}", request.headers());
+
+        // cfg(feature = "production")
+        // 이걸 써야하는 곳을 잘 생각해 인증쪽에서
+
         let msg = match (method, path) {
             (Method::GET, "/auth/token") => Msg::CheckAccessToken(request.try_into()?),
             (Method::POST, "/auth/token") => {
