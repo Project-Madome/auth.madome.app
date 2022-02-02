@@ -19,14 +19,14 @@ use error::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
-/* #[async_trait::async_trait]
-impl<A, B> AsyncTryInto<A> for B
-where
-    A: AsyncTryFrom<B>,
-{
-    type Error = <A as AsyncTryFrom<B>>::Error;
+pub fn release() -> bool {
+    cfg!(not(debug_assertions))
+}
 
-    async fn try_into(b: B) -> std::result::Result<A, Error> {
-        <A as AsyncTryFrom<B>>::try_from(b).await
-    }
-} */
+pub fn debug() -> bool {
+    cfg!(debug_assertions)
+}
+
+pub fn test() -> bool {
+    cfg!(test)
+}

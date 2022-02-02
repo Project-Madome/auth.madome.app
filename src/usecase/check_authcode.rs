@@ -10,6 +10,8 @@ use crate::{
 #[derive(Deserialize, Clone)]
 pub struct Payload {
     pub code: String,
+    #[serde(rename = "email")]
+    pub user_email: String,
 }
 
 pub struct Model {
@@ -29,10 +31,10 @@ impl From<Error> for crate::Error {
 }
 
 pub async fn execute(
-    Payload { code }: Payload,
+    Payload { code, user_email }: Payload,
     repository: Arc<RepositorySet>,
 ) -> crate::Result<Model> {
-    let maybe_authcode = repository.authcode().pop(&code).await?;
+    let maybe_authcode = repository.authcode().pop(&user_email, &code).await?;
 
     match maybe_authcode {
         Some(authcode) if !authcode.expired() => Ok(Model {

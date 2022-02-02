@@ -11,26 +11,20 @@ use crate::{
 
 use super::{check_authcode, check_token_pair};
 
-pub struct Payload {
-    pub user_email: Option<String>,
-    pub user_id: Option<String>,
+pub enum Payload {
+    UserEmail(String),
+    UserId(String),
 }
 
 impl From<check_authcode::Model> for Payload {
     fn from(model: check_authcode::Model) -> Self {
-        Self {
-            user_email: Some(model.user_email),
-            user_id: None,
-        }
+        Self::UserEmail(model.user_email)
     }
 }
 
 impl From<check_token_pair::Model> for Payload {
     fn from(model: check_token_pair::Model) -> Self {
-        Self {
-            user_email: None,
-            user_id: Some(model.user_id),
-        }
+        Self::UserId(model.user_id)
     }
 }
 
@@ -41,7 +35,10 @@ pub struct Model {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum Error {}
+pub enum Error {
+    #[error("Not found user")]
+    NotFoundUser,
+}
 
 impl From<Error> for crate::Error {
     fn from(err: Error) -> Self {
@@ -50,17 +47,16 @@ impl From<Error> for crate::Error {
 }
 
 pub async fn execute(
-    Payload {
-        user_email,
-        user_id,
-    }: Payload,
+    payload: Payload,
     repository: Arc<RepositorySet>,
     command: Arc<CommandSet>,
 ) -> crate::Result<Model> {
-    let user_id = match (user_id, user_email) {
-        (Some(user_id), _) => user_id,
-        (_, Some(user_email)) => command.get_user_info(user_email).await?.id,
-        _ => unreachable!(),
+    let user_id = match payload {
+        Payload::UserId(user_id) => user_id,
+        Payload::UserEmail(user_email) => match command.get_user_info(user_email).await? {
+            Some(user) => user.id,
+            None => return Err(Error::NotFoundUser.into()),
+        },
     };
 
     let token = Token::new(user_id);
@@ -101,10 +97,7 @@ mod tests {
             user_id = Uuid::new_v4().to_string();
         },
         {
-            let payload = create_token_pair::Payload {
-                user_id: Some(user_id.clone()),
-                user_email: None
-            };
+            let payload = create_token_pair::Payload::UserId(user_id.clone());
             let r = create_token_pair::execute(payload, repository.clone(), command.clone()).await.unwrap();
 
             let payload = check_token_pair::Payload {

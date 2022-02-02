@@ -6,6 +6,7 @@ use crate::{
     command::CommandSet,
     entity::authcode::Authcode,
     error::UseCaseError,
+    release,
     repository::{r#trait::AuthcodeRepository, RepositorySet},
 };
 
@@ -18,7 +19,13 @@ pub struct Payload {
 pub struct Model;
 
 #[derive(Debug, thiserror::Error)]
-pub enum Error {}
+pub enum Error {
+    #[error("Not found user")]
+    NotFoundUser,
+
+    #[error("Too many created authcode")]
+    TooManyCreatedAuthcode,
+}
 
 impl From<Error> for crate::Error {
     fn from(err: Error) -> Self {
@@ -31,15 +38,28 @@ pub async fn execute(
     repository: Arc<RepositorySet>,
     command: Arc<CommandSet>,
 ) -> crate::Result<Model> {
+    let user = match command.get_user_info(user_email).await? {
+        Some(user) => user,
+        None => return Err(Error::NotFoundUser.into()),
+    };
+
+    let authcode_repository = repository.authcode();
+
     let code = command.random_code().await?;
 
-    let authcode = Authcode::new(user_email.clone(), code.clone());
+    let authcode = Authcode::new(user.email.clone(), code.clone());
 
     log::debug!("created authcode = {}", authcode.code);
 
-    let _ = repository.authcode().add(authcode).await?;
+    let created = authcode_repository.add(authcode).await?;
 
-    command.send_email(user_email, code).await?;
+    if !created {
+        return Err(Error::TooManyCreatedAuthcode.into());
+    }
+
+    if release() {
+        command.send_email(user.email, code).await?;
+    }
 
     Ok(Model)
 }

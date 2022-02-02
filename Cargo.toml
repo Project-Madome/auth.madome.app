@@ -25,8 +25,8 @@ simple_logger = "2.1.0"
 chrono = { version = "0.4.19", features = [] }
 inspect = { git = "https://github.com/syrflover/inspect-rs" }
 openssl = { version = "0.10.38", features = ["vendored"] }
-util = { path = "../util" }
 base64 = "0.13.0"
 ring = "0.16.20"
 querystring = "1.1.0"
-madome-sdk = { path = "../madome-sdk" }
+util = { path = "../util" }
+madome-sdk = { path = "../madome-sdk", features = ["server"] }

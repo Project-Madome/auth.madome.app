@@ -62,6 +62,7 @@ impl From<Error> for Response<Body> {
         use check_authcode::Error::*;
         use check_refresh_token::Error::*;
         use check_token_pair::Error::*;
+        use create_authcode::Error::*;
         use Error::*;
         use UseCaseError::*;
 
@@ -94,6 +95,18 @@ impl From<Error> for Response<Body> {
                 .body(err.to_string().into()),
 
             UseCase(CheckAuthcode(err @ InvalidAuthcode)) => response
+                .status(StatusCode::NOT_FOUND)
+                .body(err.to_string().into()),
+
+            UseCase(CreateAuthcode(err @ TooManyCreatedAuthcode)) => response
+                .status(StatusCode::TOO_MANY_REQUESTS)
+                .body(err.to_string().into()),
+
+            UseCase(CreateAuthcode(err @ create_authcode::Error::NotFoundUser)) => response
+                .status(StatusCode::NOT_FOUND)
+                .body(err.to_string().into()),
+
+            UseCase(CreateTokenPair(err @ create_token_pair::Error::NotFoundUser)) => response
                 .status(StatusCode::NOT_FOUND)
                 .body(err.to_string().into()),
 

@@ -11,10 +11,10 @@ pub struct GetUserInfo {
 impl r#trait::GetUserInfo for GetUserInfo {}
 
 #[async_trait::async_trait]
-impl Command<String, UserInfo> for GetUserInfo {
+impl Command<String, Option<UserInfo>> for GetUserInfo {
     type Error = crate::Error;
 
-    async fn execute(&self, user_id_or_email: String) -> Result<UserInfo, Self::Error> {
+    async fn execute(&self, user_id_or_email: String) -> Result<Option<UserInfo>, Self::Error> {
         let url = format!(
             "{}/users/{}",
             self.config.madome_user_server(),
@@ -23,9 +23,13 @@ impl Command<String, UserInfo> for GetUserInfo {
 
         let res = reqwest::get(url).await.map_err(Error::from)?;
 
+        if res.status().as_u16() == 404 {
+            return Ok(None);
+        }
+
         let user_info = res.json::<UserInfo>().await.map_err(Error::from)?;
 
-        Ok(user_info)
+        Ok(Some(user_info))
     }
 }
 
@@ -44,7 +48,7 @@ impl From<Error> for crate::Error {
 pub mod r#trait {
     use crate::{command::r#trait::Command, json::user::UserInfo};
 
-    pub trait GetUserInfo: Command<String, UserInfo, Error = crate::Error> {}
+    pub trait GetUserInfo: Command<String, Option<UserInfo>, Error = crate::Error> {}
 }
 
 #[cfg(test)]
@@ -71,16 +75,16 @@ pub mod tests {
     impl r#trait::GetUserInfo for GetUserInfo {}
 
     #[async_trait::async_trait]
-    impl Command<String, UserInfo> for GetUserInfo {
+    impl Command<String, Option<UserInfo>> for GetUserInfo {
         type Error = crate::Error;
 
-        async fn execute(&self, id_or_email: String) -> Result<UserInfo, Self::Error> {
+        async fn execute(&self, id_or_email: String) -> Result<Option<UserInfo>, Self::Error> {
             let user = self
                 .users
                 .iter()
-                .find(|user| user.id == id_or_email || user.email == id_or_email)
-                .unwrap();
-            Ok(user.clone())
+                .find(|user| user.id == id_or_email || user.email == id_or_email);
+
+            Ok(user.cloned())
         }
     }
 }

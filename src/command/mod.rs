@@ -53,7 +53,7 @@ pub struct CommandSet {
 }
 
 impl CommandSet {
-    pub async fn get_user_info(&self, user_id_or_email: String) -> crate::Result<UserInfo> {
+    pub async fn get_user_info(&self, user_id_or_email: String) -> crate::Result<Option<UserInfo>> {
         self.get_user_info.execute(user_id_or_email).await
     }
 

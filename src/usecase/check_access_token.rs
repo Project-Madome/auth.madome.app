@@ -23,13 +23,11 @@ impl TryFrom<Request<Body>> for Payload {
 
     fn try_from(request: Request<Body>) -> Result<Self, Self::Error> {
         let mut cookie = Cookie::from(&request);
-
-        let access_token = cookie.take(MADOME_ACCESS_TOKEN).unwrap_or_default();
-
         let qs = querystring::querify(request.uri().query().unwrap_or(""))
             .into_iter()
             .collect::<HashMap<_, _>>();
 
+        let access_token = cookie.take(MADOME_ACCESS_TOKEN).unwrap_or_default();
         let minimum_role = qs.get("role").and_then(|v| v.parse().ok());
 
         Ok(Self {
@@ -96,7 +94,10 @@ pub async fn execute(
     };
 
     if let Some(minimum_role) = minimum_role {
-        let user = command.get_user_info(token_data.user_id.clone()).await?;
+        let user = match command.get_user_info(token_data.user_id.clone()).await? {
+            Some(user) => user,
+            None => return Err(Error::UnauthorizedAccessToken.into()),
+        };
 
         if user.role < minimum_role {
             return Err(Error::PermissionDenied.into());

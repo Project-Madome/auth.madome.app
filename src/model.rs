@@ -29,12 +29,16 @@ impl From<create_token_pair::Model> for Response<Body> {
             refresh_token,
         }: create_token_pair::Model,
     ) -> Self {
-        let set_cookie_options = SetCookieOptions::new().domain("madome.app").http_only(true);
+        let set_cookie_options = SetCookieOptions::new()
+            .domain("madome.app")
+            .path("/")
+            .http_only(true)
+            .secure(true);
         let set_cookie = SetCookie::new()
             .set(
                 MADOME_ACCESS_TOKEN,
                 access_token,
-                set_cookie_options.clone().max_age(3600 * 4),
+                set_cookie_options.clone().max_age(3600 * 24 * 7),
             )
             .set(
                 MADOME_REFRESH_TOKEN,
