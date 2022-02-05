@@ -6,8 +6,7 @@ use super::token;
 
 pub const SECRET_KEY_EXP: i64 = token::REFRESH_TOKEN_EXP;
 
-#[cfg_attr(test, derive(Default))]
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct SecretKey(pub String);
 
 impl SecretKey {
