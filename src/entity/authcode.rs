@@ -1,5 +1,7 @@
 use std::time::SystemTime;
 
+pub const MAX_AGE: u64 = 60 * 5;
+
 pub struct Authcode {
     pub user_email: String,
     pub code: String,
@@ -16,7 +18,7 @@ impl Authcode {
     }
 
     pub fn expired(&self) -> bool {
-        let r = matches!(self.timer.elapsed(), Ok(elapsed) if elapsed.as_secs() >  60 * 5);
+        let r = matches!(self.timer.elapsed(), Ok(elapsed) if elapsed.as_secs() >  MAX_AGE);
 
         log::debug!(
             "Authcode::expired {} => {}s",

@@ -31,6 +31,15 @@ impl TryFrom<Request<Body>> for Payload {
     }
 }
 
+impl From<(String, String)> for Payload {
+    fn from((access_token, refresh_token): (String, String)) -> Self {
+        Self {
+            access_token,
+            refresh_token,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Model {
     pub user_id: String,

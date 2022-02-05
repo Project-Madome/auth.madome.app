@@ -1,11 +1,14 @@
 use std::convert::TryInto;
 
-use hyper::{Body, Method, Request};
+use hyper::{http::response::Builder as ResponseBuilder, Body, Method, Request};
 use serde::de::DeserializeOwned;
 
 use util::{r#async::AsyncTryFrom, ReadChunks};
 
-use crate::usecase::{check_access_token, check_authcode, check_token_pair, create_authcode};
+use crate::usecase::{
+    check_access_token, check_and_refresh_token_pair, check_authcode, check_token_pair,
+    create_authcode,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -25,20 +28,21 @@ pub enum Msg {
     CreateTokenPair(check_authcode::Payload),
     RefreshTokenPair(check_token_pair::Payload),
     CheckAccessToken(check_access_token::Payload),
+    CheckAndRefreshTokenPair(check_and_refresh_token_pair::Payload),
 }
 
-#[async_trait::async_trait]
-impl AsyncTryFrom<Request<Body>> for Msg {
-    type Error = crate::Error;
-
-    async fn async_try_from(request: Request<Body>) -> Result<Self, Self::Error> {
+impl Msg {
+    pub async fn from_http(
+        request: Request<Body>,
+        response: ResponseBuilder,
+    ) -> crate::Result<(Self, ResponseBuilder)> {
         let method = request.method().clone();
         let path = request.uri().path();
 
         log::debug!("request headers = {:?}", request.headers());
 
         // cfg(feature = "production")
-        // 이걸 써야하는 곳을 잘 생각해 인증쪽에서
+        // TODO: 이걸 써야하는 곳을 잘 생각해 인증쪽에서
 
         let msg = match (method, path) {
             (Method::GET, "/auth/token") => Msg::CheckAccessToken(request.try_into()?),
@@ -49,10 +53,11 @@ impl AsyncTryFrom<Request<Body>> for Msg {
             (Method::POST, "/auth/code") => {
                 Msg::CreateAuthcode(Wrap::async_try_from(request).await?.inner())
             }
+            // TODO: check and refresh token pair
             _ => return Err(Error::NotFound.into()),
         };
 
-        Ok(msg)
+        Ok((msg, response))
     }
 }
 

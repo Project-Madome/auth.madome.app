@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
-use serde::Serialize;
-
 use crate::{
     command::CommandSet,
     entity::{secret_key::SecretKey, token::Token},
     error::UseCaseError,
+    model::TokenPair,
     repository::{r#trait::SecretKeyRepository, RepositorySet},
 };
 
@@ -28,11 +27,7 @@ impl From<check_token_pair::Model> for Payload {
     }
 }
 
-#[derive(Serialize, Debug)]
-pub struct Model {
-    pub access_token: String,
-    pub refresh_token: String,
-}
+pub type Model = TokenPair;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

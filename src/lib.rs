@@ -1,17 +1,17 @@
 extern crate util;
 
-mod app;
-mod command;
-mod config;
-mod database;
-mod entity;
-mod error;
-mod json;
-mod model;
-mod msg;
-mod registry;
-mod repository;
-mod usecase;
+pub mod app;
+pub mod command;
+pub mod config;
+pub mod database;
+pub mod entity;
+pub mod error;
+pub mod json;
+pub mod model;
+pub mod msg;
+pub mod registry;
+pub mod repository;
+pub mod usecase;
 
 pub use registry::RootRegistry;
 
@@ -20,7 +20,7 @@ use error::Error;
 type Result<T> = std::result::Result<T, Error>;
 
 pub fn release() -> bool {
-    cfg!(not(debug_assertions))
+    cfg!(not(debug_assertions)) || cfg!(mock)
 }
 
 pub fn debug() -> bool {

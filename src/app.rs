@@ -9,17 +9,18 @@ use hyper::{
 };
 use inspect::{Inspect, InspectOk};
 use sai::{Component, ComponentLifecycle, Injected};
-use util::r#async::AsyncTryFrom;
 
 use crate::command::CommandSet;
 use crate::config::Config;
-use crate::model::Model;
+use crate::model::{Model, Presenter};
 use crate::msg::Msg;
 use crate::repository::RepositorySet;
 use crate::usecase::{
-    check_access_token, check_authcode, check_token_pair, create_authcode, create_token_pair,
+    check_access_token, check_and_refresh_token_pair, check_authcode, check_token_pair,
+    create_authcode, create_token_pair,
 };
 
+#[cfg_attr(test, derive(Default))]
 #[derive(Component)]
 pub struct Resolver {
     #[injected]
@@ -64,29 +65,26 @@ impl Resolver {
                     .await?
                     .into()
             }
+
+            Msg::CheckAndRefreshTokenPair(payload) => {
+                check_and_refresh_token_pair::execute(payload, repository, command)
+                    .await?
+                    .into()
+            }
         };
 
         Ok(model)
     }
 }
 
-#[derive(Component)]
-#[lifecycle]
-pub struct HttpServer {
-    #[injected]
-    resolver: Injected<Resolver>,
-    /* tx: Option<mpsc::Sender<()>>,
-    rx: Option<mpsc::Receiver<()>>, */
-    #[injected]
-    config: Injected<Config>,
-}
-
 async fn handler(request: Request<Body>, resolver: Arc<Resolver>) -> crate::Result<Response<Body>> {
-    let msg = Msg::async_try_from(request).await?;
+    let response = Response::builder();
+
+    let (msg, response) = Msg::from_http(request, response).await?;
 
     let model = resolver.resolve(msg).await?;
 
-    let response = model.into();
+    let response = model.to_http(response);
 
     Ok(response)
 }
@@ -127,6 +125,17 @@ async fn service(
     // log::error!("{}", err);
 }
 
+#[derive(Component)]
+#[lifecycle]
+pub struct HttpServer {
+    #[injected]
+    resolver: Injected<Resolver>,
+    /* tx: Option<mpsc::Sender<()>>,
+    rx: Option<mpsc::Receiver<()>>, */
+    #[injected]
+    config: Injected<Config>,
+}
+
 #[async_trait::async_trait]
 impl ComponentLifecycle for HttpServer {
     async fn start(&mut self) {
@@ -138,10 +147,9 @@ impl ComponentLifecycle for HttpServer {
         let resolver = Arc::clone(&self.resolver);
 
         let port = self.config.port();
+        let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
         let t = tokio::spawn(async move {
-            let addr = SocketAddr::from(([0, 0, 0, 0], port));
-
             let svc = |resolver: Arc<Resolver>| async move {
                 Ok::<_, Infallible>(service_fn(move |request| {
                     service(request, Arc::clone(&resolver))
@@ -155,7 +163,23 @@ impl ComponentLifecycle for HttpServer {
 
             if let Err(err) = server.await {
                 panic!("{:?}", err);
+                // oneshot 채널 열어서 스탑 메세지 보내서 서버 프로세스를 죽여야됨
             }
+            /* // Server Mock
+            let svc = |resolver: Arc<Resolver>| async move {
+                Ok::<_, Infallible>(service_fn(move |request| {
+                    service(request, Arc::clone(&resolver))
+                }))
+            };
+
+            let server = hyper::Server::bind(&addr)
+                .serve(make_service_fn(move |_| svc(Arc::clone(&resolver))));
+
+            log::info!("started http server: 0.0.0.0:{}", port);
+
+            if let Err(err) = server.await {
+                panic!("{:?}", err);
+            } */
         });
 
         t.await.unwrap();
@@ -164,22 +188,102 @@ impl ComponentLifecycle for HttpServer {
     async fn stop(&mut self) {}
 }
 
-/* pub async fn app(request: Request<Body>) -> crate::Result<Response<Body>> {
-    /* let app = tower::service_fn(|request: Request<Body>| async move {
-        let msg = Msg::from(&request);
+/* #[cfg(test)]
+mod tests {
+    use std::{convert::Infallible, fs, sync::Arc};
 
-        let model = resolve(msg).await;
+    use hyper::{
+        service::{make_service_fn, service_fn},
+        Client,
+    };
+    use hyperlocal::{UnixClientExt, UnixServerExt};
+    use sai::{Component, ComponentLifecycle, Injected};
+    use util::test_registry;
+    use uuid::Uuid;
 
-        let response = present(model).await;
+    use crate::{
+        command::{self, CommandSet},
+        entity::token::Token,
+        json::user::UserInfo,
+        repository::RepositorySet,
+    };
 
-        response
-    }); */
+    use super::{service, Resolver};
 
-    let msg = Msg::try_from(request).await?;
+    const SOCKET_PATH: &str = "aaaaa";
 
-    let model = resolve(msg).await?;
+    struct MockHttpServer {
+        pub resolver: Injected<Resolver>,
+    }
 
-    let response = model.present()?;
+    impl MockHttpServer {
+        async fn start(&self, socket_path: &str) {
+            let resolver = Arc::clone(&self.resolver);
 
-    Ok(response)
+            tokio::spawn(async move {
+                let svc = |resolver: Arc<Resolver>| async move {
+                    Ok::<_, Infallible>(service_fn(move |request| {
+                        service(request, Arc::clone(&resolver))
+                    }))
+                };
+
+                fs::create_dir_all("./.temp").expect("create dir");
+
+                let server = hyper::Server::bind_unix(format!("./.temp/{}", socket_path))
+                    .unwrap()
+                    .serve(make_service_fn(move |_| svc(Arc::clone(&resolver))));
+
+                if let Err(err) = server.await {
+                    panic!("{:?}", err);
+                }
+            });
+        }
+    }
+
+    #[tokio::test]
+    async fn t() {
+        use crate::repository::r#trait::SecretKeyRepository;
+
+        test_registry!(
+        [(Injected) -> repository: RepositorySet, command: CommandSet] ->
+        [auth_socket_path: &str, user_id: String, secret_key: String, token: Token] ->
+        {
+            user_id = Uuid::new_v4().to_string();
+            secret_key = "S3Cr#tK3y".to_string();
+            token = Token::new(user_id.clone());
+
+            repository
+                .secret_key()
+                .add(&token.id, &secret_key)
+                .await
+                .unwrap();
+
+            let get_user_info = command::tests::GetUserInfo::from(UserInfo {
+                id: user_id.clone(),
+                email: "".to_string(),
+                role: 0,
+            });
+
+            command.set_get_user_info(get_user_info);
+        },
+        {
+            let resolver = Resolver {
+                repository,
+                command,
+            };
+            let mock_http_server = MockHttpServer {
+                resolver: Injected::new(resolver)
+            };
+
+            tokio::spawn(async move {
+                mock_http_server.start().await;
+            });
+
+            /* test code */
+
+            let client = Client::unix();
+
+            client.get()
+        });
+    }
 } */

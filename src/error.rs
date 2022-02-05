@@ -1,10 +1,11 @@
 use hyper::{Body, Response, StatusCode};
+use util::http::{SetCookie, SetHeaders};
 
 use crate::{
     command::{get_user_info, random_code, send_email},
     usecase::{
-        check_access_token, check_authcode, check_refresh_token, check_token_pair, create_authcode,
-        create_token_pair,
+        check_access_token, check_and_refresh_token_pair, check_authcode, check_refresh_token,
+        check_token_pair, create_authcode, create_token_pair,
     },
 };
 
@@ -53,6 +54,8 @@ pub enum UseCaseError {
     CheckTokenPair(#[from] check_token_pair::Error),
     #[error("CreateAuthcode: {0}")]
     CreateAuthcode(#[from] create_authcode::Error),
+    #[error("CheckAndRefreshTokenPair: {0}")]
+    CheckAndRefreshTokenPair(#[from] check_and_refresh_token_pair::Error),
 }
 
 impl From<Error> for Response<Body> {
@@ -109,6 +112,23 @@ impl From<Error> for Response<Body> {
             UseCase(CreateTokenPair(err @ create_token_pair::Error::NotFoundUser)) => response
                 .status(StatusCode::NOT_FOUND)
                 .body(err.to_string().into()),
+
+            UseCase(CheckAndRefreshTokenPair(
+                err @ check_and_refresh_token_pair::Error::PermissionDenied(_),
+            )) => {
+                let err_str = err.to_string();
+                let check_and_refresh_token_pair::Error::PermissionDenied(token_pair) = err;
+
+                /* let t = match err {
+                    check_and_refresh_token_pair::Error::PermissionDenied(t) => t,
+                    // _ => unreachable!(),
+                }; */
+
+                response
+                    .status(StatusCode::FORBIDDEN)
+                    .headers(SetCookie::from(token_pair).iter())
+                    .body(err_str.into())
+            }
 
             err => response
                 .status(StatusCode::INTERNAL_SERVER_ERROR)

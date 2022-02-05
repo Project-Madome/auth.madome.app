@@ -6,7 +6,7 @@ use uuid::Uuid;
 pub const ACCESS_TOKEN_EXP: i64 = 3600 * 4;
 pub const REFRESH_TOKEN_EXP: i64 = 3600 * 24 * 7;
 
-mod jwt {
+pub mod jwt {
     use jsonwebtoken::{DecodingKey, EncodingKey, Header, TokenData, Validation};
     use serde::de::DeserializeOwned;
     use serde::Serialize;
@@ -55,6 +55,7 @@ pub struct Token {
     pub user_id: String,
 }
 
+#[cfg_attr(test, derive(Default, Clone))]
 #[derive(Serialize, Deserialize)]
 pub struct AccessToken {
     pub sub: String,
@@ -101,6 +102,7 @@ impl From<Token> for AccessToken {
     }
 }
 
+#[cfg_attr(test, derive(Default, Clone))]
 #[derive(Serialize, Deserialize)]
 pub struct RefreshToken {
     pub sub: String,

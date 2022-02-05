@@ -1,50 +1,69 @@
-use hyper::{header, Body, Response, StatusCode};
+use hyper::{header, http::response::Builder as ResponseBuilder, Body, Response, StatusCode};
 use madome_sdk::auth::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
 use util::http::{SetCookie, SetCookieOptions, SetHeaders};
 
 use crate::{
     into_model,
-    usecase::{check_access_token, create_authcode, create_token_pair},
+    usecase::{check_access_token, check_and_refresh_token_pair, create_authcode},
 };
 
+#[cfg_attr(test, derive(Default))]
+#[derive(Debug)]
+pub struct TokenPair {
+    pub access_token: String,
+    pub refresh_token: String,
+}
+
 into_model![
+    (TokenPair, TokenPair),
     (CreateAuthcode, create_authcode::Model),
-    (CreateTokenPair, create_token_pair::Model),
     (CheckAccessToken, check_access_token::Model),
+    (
+        CheckAndRefreshTokenPair,
+        check_and_refresh_token_pair::Model
+    ),
 ];
 
-impl From<create_authcode::Model> for Response<Body> {
-    fn from(_: create_authcode::Model) -> Self {
-        Response::builder()
+pub trait Presenter: Sized {
+    fn to_http(self, _response: ResponseBuilder) -> Response<Body> {
+        unimplemented!()
+    }
+}
+
+impl Presenter for create_authcode::Model {
+    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
+        response
             .status(StatusCode::CREATED)
             .body(Body::empty())
             .unwrap()
     }
 }
 
-impl From<create_token_pair::Model> for Response<Body> {
-    fn from(
-        create_token_pair::Model {
-            access_token,
-            refresh_token,
-        }: create_token_pair::Model,
-    ) -> Self {
+impl From<TokenPair> for SetCookie {
+    fn from(model: TokenPair) -> Self {
         let set_cookie_options = SetCookieOptions::new()
             .domain("madome.app")
             .path("/")
             .http_only(true)
             .secure(true);
-        let set_cookie = SetCookie::new()
+
+        SetCookie::new()
             .set(
                 MADOME_ACCESS_TOKEN,
-                access_token,
+                model.access_token,
                 set_cookie_options.clone().max_age(3600 * 24 * 7),
             )
             .set(
                 MADOME_REFRESH_TOKEN,
-                refresh_token,
+                model.refresh_token,
                 set_cookie_options.max_age(3600 * 24 * 7),
-            );
+            )
+    }
+}
+
+impl Presenter for TokenPair {
+    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
+        let set_cookie = SetCookie::from(self);
 
         log::debug!(
             "set-cookie = {:?}",
@@ -54,21 +73,31 @@ impl From<create_token_pair::Model> for Response<Body> {
                 .collect::<Vec<_>>()
         );
 
-        Response::builder()
+        response
             .status(StatusCode::CREATED)
             .headers(set_cookie.iter())
             .body(Body::empty())
-            // .header(header::CONTENT_TYPE, header::APPLICATION_JSON)
-            // .body(Body::from(serialized))
             .unwrap()
     }
 }
 
-impl From<check_access_token::Model> for Response<Body> {
-    fn from(model: check_access_token::Model) -> Self {
-        let serialized = serde_json::to_string(&model).expect("json serialize");
+impl Presenter for check_access_token::Model {
+    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
+        let serialized = serde_json::to_string(&self).expect("json serialize");
 
-        Response::builder()
+        response
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(serialized.into())
+            .unwrap()
+    }
+}
+
+impl Presenter for check_and_refresh_token_pair::Model {
+    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
+        let serialized = serde_json::to_string(&self).expect("json serialize");
+
+        response
             .status(StatusCode::OK)
             .header(header::CONTENT_TYPE, "application/json")
             .body(serialized.into())
@@ -94,17 +123,16 @@ macro_rules! into_model {
         )*
 
 
-        impl From<Model> for hyper::Response<hyper::Body> {
-            fn from(model: Model) -> Self {
+        impl Presenter for Model {
+            fn to_http(self, response: ResponseBuilder) -> Response<Body> {
                 use Model::*;
 
-                match model {
+                match self {
                     $(
-                        $member(model) => model.into(),
+                        $member(model) => model.to_http(response),
                     )*
                 }
             }
         }
-
     };
 }
