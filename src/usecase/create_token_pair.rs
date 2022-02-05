@@ -8,7 +8,7 @@ use crate::{
     repository::{r#trait::SecretKeyRepository, RepositorySet},
 };
 
-use super::{check_authcode, check_token_pair};
+use super::check_authcode;
 
 pub enum Payload {
     UserEmail(String),
@@ -21,11 +21,11 @@ impl From<check_authcode::Model> for Payload {
     }
 }
 
-impl From<check_token_pair::Model> for Payload {
+/* impl From<check_token_pair::Model> for Payload {
     fn from(model: check_token_pair::Model) -> Self {
         Self::UserId(model.user_id)
     }
-}
+} */
 
 pub type Model = TokenPair;
 
@@ -33,6 +33,9 @@ pub type Model = TokenPair;
 pub enum Error {
     #[error("Not found user")]
     NotFoundUser,
+
+    #[error("Can't added secret key")]
+    CannotAddedSecretKey,
 }
 
 impl From<Error> for crate::Error {
@@ -57,7 +60,11 @@ pub async fn execute(
     let token = Token::new(user_id);
     let secret_key = SecretKey::new();
 
-    let _ = repository.secret_key().add(&token.id, &secret_key).await?;
+    let secret_key_added = repository.secret_key().add(&token.id, &secret_key).await?;
+
+    if !secret_key_added {
+        return Err(Error::CannotAddedSecretKey.into());
+    }
 
     let (access_token, refresh_token) = token.serialize(&secret_key)?;
 

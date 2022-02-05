@@ -28,5 +28,6 @@ openssl = { version = "0.10.38", features = ["vendored"] }
 base64 = "0.13.0"
 ring = "0.16.20"
 querystring = "1.1.0"
+redis = { version = "0.21.5", features = ["tokio-comp"] }
 util = { path = "../util" }
 madome-sdk = { path = "../madome-sdk", features = ["server"] }

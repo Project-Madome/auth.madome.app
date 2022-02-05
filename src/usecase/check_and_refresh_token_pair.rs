@@ -9,7 +9,7 @@ use crate::{
     command::CommandSet, error::UseCaseError, model::TokenPair, repository::RepositorySet,
 };
 
-use super::{check_access_token, check_token_pair, create_token_pair};
+use super::{check_access_token, refresh_token_pair};
 
 pub struct Payload {
     pub access_token: String,
@@ -61,6 +61,9 @@ impl From<Error> for crate::Error {
     }
 }
 
+/// # Return
+/// - Unauthorized -> None
+/// - Other -> Some(err)
 fn is_not_unauthorized(err: crate::Error) -> Option<crate::Error> {
     use crate::error::UseCaseError::*;
     use crate::usecase::check_access_token::Error::*;
@@ -72,7 +75,10 @@ fn is_not_unauthorized(err: crate::Error) -> Option<crate::Error> {
     }
 }
 
-fn is_permission_denied(err: crate::Error) -> Option<crate::Error> {
+/// # Return
+/// - PermissionDenied -> None
+/// - Other -> Some(err)
+fn is_not_permission_denied(err: crate::Error) -> Option<crate::Error> {
     use crate::error::UseCaseError::*;
     use crate::usecase::check_access_token::Error::*;
     use crate::Error::*;
@@ -104,6 +110,7 @@ pub async fn execute(
     .await
     .map_err(is_not_unauthorized);
 
+    // match Err::<check_access_token::Model, _>(None) {
     match r_check_access_token {
         // PermissionDenied 또는 기타 에러
         Err(Some(err)) => Err(err),
@@ -119,16 +126,15 @@ pub async fn execute(
             Ok(r)
         }
         Err(None) => {
-            let user_id = check_token_pair::execute(
-                (access_token, refresh_token).into(),
+            let token_pair = refresh_token_pair::execute(
+                refresh_token_pair::Payload {
+                    access_token,
+                    refresh_token,
+                },
                 repository.clone(),
                 command.clone(),
             )
             .await?;
-
-            let token_pair =
-                create_token_pair::execute(user_id.into(), repository.clone(), command.clone())
-                    .await?;
 
             let r_check_access_token = check_access_token::execute(
                 check_access_token::Payload {
@@ -140,7 +146,7 @@ pub async fn execute(
                 command,
             )
             .await
-            .map_err(is_permission_denied);
+            .map_err(is_not_permission_denied);
 
             match r_check_access_token {
                 Ok(t) => Ok(Model {

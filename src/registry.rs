@@ -32,7 +32,8 @@ mod root_registry {
         app::{HttpServer, Resolver},
         command::{random_code::RandomCode, send_email::SendEmail, CommandSet, GetUserInfo},
         config::Config,
-        repository::{InMemoryAuthcodeRepository, InMemorySecretKeyRepository, RepositorySet},
+        database::DatabaseSet,
+        repository::{InMemoryAuthcodeRepository, RedisSecretKeyRepository, RepositorySet},
     };
 
     combine_component_registry!(
@@ -53,9 +54,10 @@ mod root_registry {
     component_registry!(
         RepositoryRegistry,
         [
+            DatabaseSet,
             RepositorySet,
             InMemoryAuthcodeRepository,
-            InMemorySecretKeyRepository
+            RedisSecretKeyRepository
         ]
     );
 

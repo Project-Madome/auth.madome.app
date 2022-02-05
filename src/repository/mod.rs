@@ -1,6 +1,8 @@
 mod inmemory;
+mod redis;
 pub mod r#trait;
 
+pub use self::redis::*;
 pub use inmemory::*;
 
 use std::sync::Arc;
@@ -13,8 +15,13 @@ pub struct RepositorySet {
     #[injected]
     authcode_repository: Injected<InMemoryAuthcodeRepository>,
 
+    #[cfg(test)]
     #[injected]
     secret_key_repository: Injected<InMemorySecretKeyRepository>,
+
+    #[cfg(not(test))]
+    #[injected]
+    secret_key_repository: Injected<RedisSecretKeyRepository>,
 }
 
 impl RepositorySet {

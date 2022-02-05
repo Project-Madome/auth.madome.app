@@ -16,8 +16,8 @@ use crate::model::{Model, Presenter};
 use crate::msg::Msg;
 use crate::repository::RepositorySet;
 use crate::usecase::{
-    check_access_token, check_and_refresh_token_pair, check_authcode, check_token_pair,
-    create_authcode, create_token_pair,
+    check_access_token, check_and_refresh_token_pair, check_authcode, create_authcode,
+    create_token_pair,
 };
 
 #[cfg_attr(test, derive(Default))]
@@ -51,15 +51,14 @@ impl Resolver {
                     .into()
             }
 
-            Msg::RefreshTokenPair(payload) => {
+            /* Msg::RefreshTokenPair(payload) => {
                 let user_id =
                     check_token_pair::execute(payload, repository.clone(), command.clone()).await?;
 
                 create_token_pair::execute(user_id.into(), repository, command)
                     .await?
                     .into()
-            }
-
+            } */
             Msg::CheckAccessToken(payload) => {
                 check_access_token::execute(payload, repository, command)
                     .await?
@@ -96,7 +95,7 @@ async fn service(
     let req_method = request.method().to_owned();
     let req_uri = request.uri().to_string();
 
-    log::info!("HTTP Request {} {}", req_method, req_uri);
+    log::info!("--> {} {}", req_method, req_uri);
 
     let start = SystemTime::now();
 
@@ -105,7 +104,7 @@ async fn service(
     let end = start
         .elapsed()
         .as_ref()
-        .map(Duration::as_millis)
+        .map(Duration::as_micros)
         .unwrap_or(0);
 
     match response {
@@ -114,11 +113,11 @@ async fn service(
     }
     .inspect_ok(|res| {
         log::info!(
-            "HTTP Response {} {} {} {}ms",
+            "<-- {} {} {} {}ms",
             req_method,
             req_uri,
             res.status(),
-            end
+            end as f64 / 1000.0
         )
     })
 

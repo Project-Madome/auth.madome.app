@@ -65,13 +65,13 @@ impl Presenter for TokenPair {
     fn to_http(self, response: ResponseBuilder) -> Response<Body> {
         let set_cookie = SetCookie::from(self);
 
-        log::debug!(
+        /* log::debug!(
             "set-cookie = {:?}",
             set_cookie
                 .iter()
                 .map(|(a, b)| (a.to_string(), b.to_str().unwrap().to_string()))
                 .collect::<Vec<_>>()
-        );
+        ); */
 
         response
             .status(StatusCode::CREATED)

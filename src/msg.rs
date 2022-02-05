@@ -26,7 +26,7 @@ pub enum Error {
 pub enum Msg {
     CreateAuthcode(create_authcode::Payload),
     CreateTokenPair(check_authcode::Payload),
-    RefreshTokenPair(check_token_pair::Payload),
+    // RefreshTokenPair(check_token_pair::Payload),
     CheckAccessToken(check_access_token::Payload),
     CheckAndRefreshTokenPair(check_and_refresh_token_pair::Payload),
 }
@@ -39,7 +39,7 @@ impl Msg {
         let method = request.method().clone();
         let path = request.uri().path();
 
-        log::debug!("request headers = {:?}", request.headers());
+        // log::debug!("request headers = {:?}", request.headers());
 
         // cfg(feature = "production")
         // TODO: 이걸 써야하는 곳을 잘 생각해 인증쪽에서
@@ -49,11 +49,11 @@ impl Msg {
             (Method::POST, "/auth/token") => {
                 Msg::CreateTokenPair(Wrap::async_try_from(request).await?.inner())
             }
-            (Method::PATCH, "/auth/token") => Msg::RefreshTokenPair(request.try_into()?),
+            (Method::PATCH, "/auth/token") => Msg::CheckAndRefreshTokenPair(request.try_into()?),
             (Method::POST, "/auth/code") => {
                 Msg::CreateAuthcode(Wrap::async_try_from(request).await?.inner())
             }
-            // TODO: check and refresh token pair
+
             _ => return Err(Error::NotFound.into()),
         };
 

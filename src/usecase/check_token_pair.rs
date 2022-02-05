@@ -43,6 +43,7 @@ impl From<(String, String)> for Payload {
 #[derive(Debug)]
 pub struct Model {
     pub user_id: String,
+    pub token_id: String,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -88,6 +89,7 @@ pub async fn execute(
 
     Ok(Model {
         user_id: access_token.user_id,
+        token_id: access_token.token_id,
     })
 }
 

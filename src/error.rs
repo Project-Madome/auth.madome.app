@@ -5,7 +5,7 @@ use crate::{
     command::{get_user_info, random_code, send_email},
     usecase::{
         check_access_token, check_and_refresh_token_pair, check_authcode, check_refresh_token,
-        check_token_pair, create_authcode, create_token_pair,
+        check_token_pair, create_authcode, create_token_pair, refresh_token_pair,
     },
 };
 
@@ -28,7 +28,16 @@ pub enum Error {
 type Msg = crate::msg::Error;
 
 #[derive(Debug, thiserror::Error)]
-pub enum RepositoryError {}
+pub enum RepositoryError {
+    #[error("Redis: {0}")]
+    Redis(#[from] redis::RedisError),
+}
+
+impl From<redis::RedisError> for Error {
+    fn from(err: redis::RedisError) -> Self {
+        Error::Repository(err.into())
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum CommandError {
@@ -56,6 +65,8 @@ pub enum UseCaseError {
     CreateAuthcode(#[from] create_authcode::Error),
     #[error("CheckAndRefreshTokenPair: {0}")]
     CheckAndRefreshTokenPair(#[from] check_and_refresh_token_pair::Error),
+    #[error("RefreshTokenPair: {0}")]
+    RefreshTokenPair(#[from] refresh_token_pair::Error),
 }
 
 impl From<Error> for Response<Body> {

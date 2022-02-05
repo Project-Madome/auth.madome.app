@@ -17,6 +17,8 @@ where
 pub struct Config {
     port: Option<u16>,
 
+    redis_url: Option<String>,
+
     madome_user_server: Option<String>,
 
     // AWS_ACCESS_KEY_ID=
@@ -31,6 +33,8 @@ impl ComponentLifecycle for Config {
 
         self.port.replace(env("PORT"));
 
+        self.redis_url.replace(env("REDIS_URL"));
+
         self.madome_user_server.replace(env("MADOME_USER_SERVER"));
 
         self.aws_config
@@ -43,6 +47,10 @@ impl ComponentLifecycle for Config {
 impl Config {
     pub fn port(&self) -> u16 {
         self.port.unwrap()
+    }
+
+    pub fn redis_url(&self) -> &str {
+        self.redis_url.as_ref().unwrap()
     }
 
     pub fn madome_user_server(&self) -> &str {
