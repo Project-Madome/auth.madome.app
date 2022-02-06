@@ -17,7 +17,6 @@ if [ "$(git branch --show-current)" = "release" ]; then
     github-release -v release \
         --user syrflover \
         --repo "auth.madome.app" \
-        # --target "$FULL_VERSION" \
         --tag "v$VERSION" \
         --name "Released v$VERSION" \
         --description "$(date "+%Y.%m.%d.%H.%m")" \
