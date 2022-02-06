@@ -7,7 +7,7 @@
 # 개발 환경일 때는 무조건 함
 
 # development mode
-if [ "$(git branch)" = "* release" ]; then
+if [ "$(git branch --show-current)" = "release" ]; then
     VERSION="$(cat Cargo.toml | grep 'version = ' | head -1 | sed -e 's/version = //' | sed -e 's/\"//g')"
 
     if [ $? -ne 0 ]; then

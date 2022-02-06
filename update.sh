@@ -1,8 +1,8 @@
-if [ "$(git branch)" = "* release" ]; then
+if [ "$(git branch --show-current)" = "release" ]; then
     git pull
 
     if [ $? -ne 0 ]; then
-        echo "failed git pull\n";
+        echo "failed git pull";
         exit 1
     fi
 
@@ -15,7 +15,7 @@ if [ "$(git branch)" = "* release" ]; then
         --name "madodme-auth-linux-x86_64"
 
     if [ $? -ne 0 ]; then
-        echo "\nfailed download from release\n"
+        echo "failed download from release"
         exit 1
     fi
 
@@ -23,7 +23,7 @@ if [ "$(git branch)" = "* release" ]; then
 
     mv "./madome-auth-linux-x86_64" "./bin/linux-x86_64/$VERSION"
 
-    echo "\nsucceed download\n"
+    echo "succeed download"
 else
     echo "not release branch"
 fi
