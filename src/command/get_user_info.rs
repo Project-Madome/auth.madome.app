@@ -35,7 +35,7 @@ impl Command<String, Option<UserInfo>> for GetUserInfo {
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("")]
+    #[error("reqwest: {0}")]
     Reqwest(#[from] reqwest::Error),
 }
 

@@ -20,7 +20,7 @@ use error::Error;
 type Result<T> = std::result::Result<T, Error>;
 
 pub fn release() -> bool {
-    cfg!(not(debug_assertions)) || cfg!(mock)
+    cfg!(not(debug_assertions))
 }
 
 pub fn debug() -> bool {
