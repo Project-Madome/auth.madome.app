@@ -21,7 +21,7 @@ if [ "$(git branch)" = "* release"]; then
         --tag "v$VERSION" \
         --name "Released v$VERSION" \
         --description "$(date "+%Y.%m.%d.%H.%m")" \
-        # --pre-release
+        --pre-release
 
     if [ $? -ne 0 ]; then
         echo "failed release"
