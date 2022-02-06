@@ -6,8 +6,7 @@ use serde::de::DeserializeOwned;
 use util::{r#async::AsyncTryFrom, ReadChunks};
 
 use crate::usecase::{
-    check_access_token, check_and_refresh_token_pair, check_authcode, check_token_pair,
-    create_authcode,
+    check_access_token, check_and_refresh_token_pair, check_authcode, create_authcode,
 };
 
 #[derive(Debug, thiserror::Error)]

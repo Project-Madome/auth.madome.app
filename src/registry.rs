@@ -33,7 +33,7 @@ mod root_registry {
         command::{random_code::RandomCode, send_email::SendEmail, CommandSet, GetUserInfo},
         config::Config,
         database::DatabaseSet,
-        repository::{InMemoryAuthcodeRepository, RedisSecretKeyRepository, RepositorySet},
+        repository::{RedisAuthcodeRepository, RedisSecretKeyRepository, RepositorySet},
     };
 
     combine_component_registry!(
@@ -56,7 +56,7 @@ mod root_registry {
         [
             DatabaseSet,
             RepositorySet,
-            InMemoryAuthcodeRepository,
+            RedisAuthcodeRepository,
             RedisSecretKeyRepository
         ]
     );

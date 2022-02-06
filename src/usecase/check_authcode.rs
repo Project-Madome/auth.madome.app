@@ -37,7 +37,7 @@ pub async fn execute(
     let maybe_authcode = repository.authcode().pop(&user_email, &code).await?;
 
     match maybe_authcode {
-        Some(authcode) if !authcode.expired() => Ok(Model {
+        Some(authcode) => Ok(Model {
             user_email: authcode.user_email,
         }),
         _ => Err(Error::InvalidAuthcode.into()),

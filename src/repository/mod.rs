@@ -12,8 +12,13 @@ use sai::{Component, Injected};
 #[cfg_attr(test, derive(Default))]
 #[derive(Component)]
 pub struct RepositorySet {
+    #[cfg(test)]
     #[injected]
     authcode_repository: Injected<InMemoryAuthcodeRepository>,
+
+    #[cfg(not(test))]
+    #[injected]
+    authcode_repository: Injected<RedisAuthcodeRepository>,
 
     #[cfg(test)]
     #[injected]

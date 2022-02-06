@@ -1,9 +1,12 @@
-use std::{collections::HashMap, sync::Mutex};
+use std::{collections::HashMap, sync::Mutex, time::SystemTime};
 
 use sai::Component;
 use util::ori;
 
-use crate::{entity::authcode::Authcode, repository::r#trait::AuthcodeRepository};
+use crate::{
+    entity::authcode::{self, Authcode},
+    repository::r#trait::AuthcodeRepository,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {}
@@ -11,7 +14,7 @@ pub enum Error {}
 #[cfg_attr(test, derive(Default))]
 #[derive(Component)]
 pub struct InMemoryAuthcodeRepository {
-    inner: Mutex<HashMap<String, Vec<Authcode>>>,
+    inner: Mutex<HashMap<String, Vec<(Authcode, SystemTime)>>>,
 }
 
 #[async_trait::async_trait]
@@ -25,11 +28,18 @@ impl AuthcodeRepository for InMemoryAuthcodeRepository {
             authcodes
                 .iter()
                 .enumerate()
-                .find(|(_, x)| x.code == code)
+                .find(|(_, (x, _))| x.code == code)
                 .map(|(i, _)| i)
         };
 
-        let authcode = authcodes.remove(position);
+        let (authcode, timer) = authcodes.remove(position);
+
+        let expired =
+            matches!(timer.elapsed(), Ok(elapsed) if elapsed.as_secs() > authcode::MAX_AGE);
+
+        if expired {
+            return Ok(None);
+        }
 
         Ok(Some(authcode))
     }
@@ -42,7 +52,10 @@ impl AuthcodeRepository for InMemoryAuthcodeRepository {
             .or_insert_with(|| Vec::with_capacity(5));
 
         if authcodes.len() >= 5 {
-            let expired = authcodes.get(0).map(|x| x.expired()).unwrap();
+            let timer = authcodes.get(0).map(|(_, timer)| timer).unwrap();
+
+            let expired =
+                matches!(timer.elapsed(), Ok(elapsed) if elapsed.as_secs() > authcode::MAX_AGE);
 
             if !expired {
                 return Ok(false);
@@ -51,7 +64,7 @@ impl AuthcodeRepository for InMemoryAuthcodeRepository {
             authcodes.remove(0);
         }
 
-        authcodes.push(authcode);
+        authcodes.push((authcode, SystemTime::now()));
 
         Ok(true)
     }
