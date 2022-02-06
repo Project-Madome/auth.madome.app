@@ -12,7 +12,7 @@ if [ "$(git branch --show-current)" = "release" ]; then
         --user syrflover \
         --repo auth.madome.app \
         --tag "v${VERSION}" \
-        --name "madodme-auth-linux-x86_64"
+        --name "madome-auth-linux-x86_64"
 
     if [ $? -ne 0 ]; then
         echo "failed download from release"
