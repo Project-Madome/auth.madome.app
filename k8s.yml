@@ -77,14 +77,14 @@ spec:
                         value: "yes"
                       # - name: REDIS_PASSWORD
                       #   value: your-password
-                  volumeMounts:
-                      - mountPath: ""
-                        name: redis-volume
-        volumes:
-            - name: redis-volume
-              hostPath:
-                  path: "{WORK_DIR}/.redis/"
-                  type: Directory
+                  # volumeMounts:
+                  # - mountPath: ""
+                  #   name: redis-volume
+        # volumes:
+        # - name: redis-volume
+        # hostPath:
+        # path: "{WORK_DIR}/.redis/"
+        # type: Directory
 
 ---
 apiVersion: v1
