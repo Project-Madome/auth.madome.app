@@ -94,8 +94,16 @@ impl Presenter for check_access_token::Model {
 }
 
 impl Presenter for check_and_refresh_token_pair::Model {
-    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
+    fn to_http(self, mut response: ResponseBuilder) -> Response<Body> {
         let serialized = serde_json::to_string(&self).expect("json serialize");
+
+        if let (Some(access_token), Some(refresh_token)) = (self.access_token, self.refresh_token) {
+            let token_pair = TokenPair {
+                access_token,
+                refresh_token,
+            };
+            response = response.headers(SetCookie::from(token_pair).iter());
+        }
 
         response
             .status(StatusCode::OK)
