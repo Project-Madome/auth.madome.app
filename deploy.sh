@@ -27,7 +27,7 @@ if [ "$(git branch --show-current)" = "release" ]; then
         exit 1
     fi
 else
-    cargo build --release --target=x86_64-unknown-linux-musl
+    cargo build --target=x86_64-unknown-linux-musl
 
     if [ $? -ne 0 ]; then
         exit 1
@@ -35,7 +35,7 @@ else
 
     VERSION="latest"
 
-    BIN="./target/x86_64-unknown-linux-musl/release/madome-auth"
+    BIN="./target/x86_64-unknown-linux-musl/debug/madome-auth"
 fi
 
 chmod +x $BIN
@@ -55,4 +55,8 @@ kubectl apply -f -
 if [ $? -ne 0 ]; then
     echo "failed apply kubectl"
     exit 1
+fi
+
+if [ "$(git branch --show-current)" != "release" ]; then
+    kubectl rollout restart deployment/madome-auth
 fi
