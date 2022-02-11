@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use std::{convert::Infallible, net::SocketAddr};
 
+use hyper::Server;
 use hyper::{
     body::Body,
     http::{Request, Response},
@@ -9,6 +10,7 @@ use hyper::{
 };
 use inspect::{Inspect, InspectOk};
 use sai::{Component, ComponentLifecycle, Injected};
+use tokio::sync::oneshot;
 
 use crate::command::CommandSet;
 use crate::config::Config;
@@ -133,58 +135,58 @@ pub struct HttpServer {
     rx: Option<mpsc::Receiver<()>>, */
     #[injected]
     config: Injected<Config>,
+
+    stop_sender: Option<oneshot::Sender<()>>,
+    stopped_receiver: Option<oneshot::Receiver<()>>,
 }
 
 #[async_trait::async_trait]
 impl ComponentLifecycle for HttpServer {
     async fn start(&mut self) {
-        /* let (tx, rx) = mpsc::channel(8);
+        let (stop_tx, stop_rx) = oneshot::channel();
+        let (stopped_tx, stopped_rx) = oneshot::channel();
 
-        self.tx.replace(tx);
-        self.rx.replace(rx); */
+        self.stop_sender.replace(stop_tx);
+        self.stopped_receiver.replace(stopped_rx);
 
         let resolver = Arc::clone(&self.resolver);
 
         let port = self.config.port();
         let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
-        let t = tokio::spawn(async move {
+        tokio::spawn(async move {
             let svc = |resolver: Arc<Resolver>| async move {
                 Ok::<_, Infallible>(service_fn(move |request| {
                     service(request, Arc::clone(&resolver))
                 }))
             };
 
-            let server = hyper::Server::bind(&addr)
-                .serve(make_service_fn(move |_| svc(Arc::clone(&resolver))));
+            let server =
+                Server::bind(&addr).serve(make_service_fn(move |_| svc(Arc::clone(&resolver))));
+
+            let server = Server::with_graceful_shutdown(server, async {
+                stop_rx.await.unwrap();
+            });
 
             log::info!("started http server: 0.0.0.0:{}", port);
 
             if let Err(err) = server.await {
-                panic!("{:?}", err);
-                // oneshot 채널 열어서 스탑 메세지 보내서 서버 프로세스를 죽여야됨
+                log::error!("{:?}", err);
             }
-            /* // Server Mock
-            let svc = |resolver: Arc<Resolver>| async move {
-                Ok::<_, Infallible>(service_fn(move |request| {
-                    service(request, Arc::clone(&resolver))
-                }))
-            };
 
-            let server = hyper::Server::bind(&addr)
-                .serve(make_service_fn(move |_| svc(Arc::clone(&resolver))));
-
-            log::info!("started http server: 0.0.0.0:{}", port);
-
-            if let Err(err) = server.await {
-                panic!("{:?}", err);
-            } */
+            stopped_tx.send(()).unwrap();
         });
-
-        t.await.unwrap();
     }
 
-    async fn stop(&mut self) {}
+    async fn stop(&mut self) {
+        let stop_tx = self.stop_sender.take().unwrap();
+
+        stop_tx.send(()).unwrap();
+
+        let stopped_rx = self.stopped_receiver.take().unwrap();
+
+        stopped_rx.await.unwrap();
+    }
 }
 
 /* #[cfg(test)]
