@@ -1,30 +1,5 @@
 pub use self::root_registry::RootRegistry;
 
-#[cfg(test)]
-mod test_root_registry {
-    use sai::{combine_component_registry, component_registry, Component};
-
-    use crate::{
-        command::{random_code::RandomCode, tests::GetUserInfo, tests::SendEmail, CommandSet},
-        config::Config,
-        repository::{InMemoryAuthcodeRepository, RepositorySet},
-    };
-
-    combine_component_registry!(RootRegistry, [RepositoryRegistry]);
-
-    component_registry!(
-        RepositoryRegistry,
-        [RepositorySet, InMemoryAuthcodeRepository]
-    );
-
-    component_registry!(
-        CommandRegistry,
-        [CommandSet, GetUserInfo, RandomCode, SendEmail]
-    );
-
-    component_registry!(ConfigRegistry, [Config]);
-}
-
 mod root_registry {
     use sai::{combine_component_registry, component_registry, Component};
 
@@ -68,3 +43,28 @@ mod root_registry {
 
     component_registry!(ConfigRegistry, [Config]);
 }
+
+/* #[cfg(test)]
+mod test_root_registry {
+    use sai::{combine_component_registry, component_registry, Component};
+
+    use crate::{
+        command::{random_code::RandomCode, tests::GetUserInfo, tests::SendEmail, CommandSet},
+        config::Config,
+        repository::{InMemoryAuthcodeRepository, RepositorySet},
+    };
+
+    combine_component_registry!(RootRegistry, [RepositoryRegistry]);
+
+    component_registry!(
+        RepositoryRegistry,
+        [RepositorySet, InMemoryAuthcodeRepository]
+    );
+
+    component_registry!(
+        CommandRegistry,
+        [CommandSet, GetUserInfo, RandomCode, SendEmail]
+    );
+
+    component_registry!(ConfigRegistry, [Config]);
+} */
