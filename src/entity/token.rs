@@ -7,7 +7,7 @@ pub const ACCESS_TOKEN_EXP: i64 = 3600 * 4;
 pub const REFRESH_TOKEN_EXP: i64 = 3600 * 24 * 7;
 
 pub mod jwt {
-    use jsonwebtoken::{DecodingKey, EncodingKey, Header, TokenData, Validation};
+    use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation};
     use serde::de::DeserializeOwned;
     use serde::Serialize;
 
@@ -39,10 +39,8 @@ pub mod jwt {
         validate_exp: bool,
     ) -> Result<TokenData<Claims>, jsonwebtoken::errors::Error> {
         let decoding_key = DecodingKey::from_secret(secret_key.as_ref());
-        let validation = Validation {
-            validate_exp,
-            ..Default::default()
-        };
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.validate_exp = validate_exp;
 
         jsonwebtoken::decode::<Claims>(token, &decoding_key, &validation)
     }
