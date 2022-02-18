@@ -30,5 +30,5 @@ ring = "0.16"
 querystring = "1.1"
 redis = { version = "0.21", features = ["tokio-comp"] }
 futures-util = "0.3"
-util = { path = "../util" }
+util = { git = "https://github.com/syrflover/util-rs", tag = "0.1.0" }
 madome-sdk = { git = "https://github.com/Project-Madome/madome-sdk-rs", tag = "0.1.0", features = ["server"] }
