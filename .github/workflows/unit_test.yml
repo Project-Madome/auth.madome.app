@@ -29,4 +29,4 @@ jobs:
               name: test
               with:
                   command: test
-                  args: -- --no-capture
+                  args: -- --nocapture
