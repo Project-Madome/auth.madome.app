@@ -1,4 +1,4 @@
-pub const MAX_AGE: u64 = 60 * 5;
+pub const MAX_AGE: u64 = 60 * 2;
 
 pub struct Authcode {
     pub user_email: String,
