@@ -6,7 +6,6 @@ use crate::{
     command::CommandSet,
     entity::authcode::Authcode,
     error::UseCaseError,
-    release,
     repository::{r#trait::AuthcodeRepository, RepositorySet},
 };
 
@@ -72,7 +71,7 @@ pub async fn execute(
             Authcode { email: String, code: String },
         }
 
-        if let Ok(debug_url) = std::env::var("DEBUG_URL") {
+        if let Ok(debug_url) = std::env::var("E2E_CHANNEL_URL") {
             let serialized = serde_json::to_vec(&Command::Authcode {
                 email: user.email,
                 code,
