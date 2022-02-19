@@ -57,8 +57,37 @@ pub async fn execute(
         return Err(Error::TooManyCreatedAuthcode.into());
     }
 
-    if release() {
+    #[cfg(not(debug_assertions))]
+    {
         command.send_email(user.email, code).await?;
+    }
+
+    // e2e channel server에 보냄
+    #[cfg(debug_assertions)]
+    {
+        // tokio::spawn(async move {
+        #[derive(serde::Serialize)]
+        #[serde(tag = "kind", rename_all = "snake_case")]
+        enum Command {
+            Authcode { email: String, code: String },
+        }
+
+        if let Ok(debug_url) = std::env::var("DEBUG_URL") {
+            let serialized = serde_json::to_vec(&Command::Authcode {
+                email: user.email,
+                code,
+            });
+
+            if let Ok(serialized) = serialized {
+                let _resp = reqwest::Client::new()
+                    .put(debug_url)
+                    .body(serialized)
+                    .send()
+                    .await
+                    .ok();
+            }
+        }
+        // });
     }
 
     Ok(Model)
