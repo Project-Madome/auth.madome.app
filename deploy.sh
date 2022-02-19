@@ -40,7 +40,7 @@ fi
 
 chmod +x $BIN
 
-docker build --build-arg BINARY_FILE="$BIN" --tag "madome-auth:$VERSION" . --no-cache --rm --force-rm
+docker build --build-arg BINARY_FILE="$BIN" --tag "madome-auth:$VERSION" . # --no-cache --rm --force-rm
 
 if [ $? -ne 0 ]; then
     echo "failed docker build"

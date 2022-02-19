@@ -13,7 +13,7 @@ use crate::usecase::{
 pub enum Error {
     #[error("Not found")]
     NotFound,
-    #[error("Json deserialize")]
+    #[error("Json deserialize: {0}")]
     JsonDeserializePayload(serde_json::Error),
 }
 
