@@ -24,28 +24,34 @@ spec:
                       - containerPort: 3112
                         protocol: TCP
 
-                  volumeMounts:
-                      - mountPath: /.env
-                        name: env-volume
-                        readOnly: true
-            volumes:
-                - name: env-volume
-                  hostPath:
-                      path: "{WORK_DIR}/.env.release"
----
-apiVersion: v1
-kind: Service
-metadata:
-    name: madome-auth
-spec:
-    # 모든 서버를 쿠버네티스로 배포하게 된다면, ClusterIp로 바꾸고 Ingress 사용함
-    type: NodePort
-    selector:
-        app: madome-auth
-    ports:
-        - port: 3112
-          protocol: TCP
-          nodePort: 32767
+                  env:
+                      - name: PORT
+                        value: "3112"
+                      - name: AWS_ACCESS_KEY_ID
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-auth-secret
+                                key: aws_access_key_id
+                      - name: AWS_SECRET_ACCESS_KEY
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-auth-secret
+                                key: aws_secret_access_key
+                      - name: REDIS_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-auth-secret
+                                key: redis_url
+                      - name: MADOME_USER_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-auth-secret
+                                key: madome_user_url
+                      - name: MADOME_E2E_CHANNEL_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-auth-secret
+                                key: madome_e2e_channel_url
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -75,23 +81,13 @@ spec:
                   env:
                       - name: ALLOW_EMPTY_PASSWORD
                         value: "yes"
-                      # - name: REDIS_PASSWORD
-                      #   value: your-password
-                  # volumeMounts:
-                  # - mountPath: ""
-                  #   name: redis-volume
-        # volumes:
-        # - name: redis-volume
-        # hostPath:
-        # path: "{WORK_DIR}/.redis/"
-        # type: Directory
-
 ---
 apiVersion: v1
 kind: Service
 metadata:
     name: redis
 spec:
+    type: ClusterIP
     selector:
         app: redis
     ports:

@@ -47,9 +47,9 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-cat k8s.yml | \
+cat k8s_deployment.yml | \
 sed -e "s/{VERSION}/$VERSION/g" | \
-sed -e "s%{WORK_DIR}%$PWD%g" | \
+# sed -e "s%{WORK_DIR}%$PWD%g" | \
 kubectl apply -f -
 
 if [ $? -ne 0 ]; then

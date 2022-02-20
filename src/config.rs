@@ -35,7 +35,7 @@ impl ComponentLifecycle for Config {
 
         self.redis_url.replace(env("REDIS_URL"));
 
-        self.madome_user_server.replace(env("MADOME_USER_SERVER"));
+        self.madome_user_server.replace(env("MADOME_USER_URL"));
 
         self.aws_config
             .replace(aws_config::from_env().region("us-east-1").load().await);
