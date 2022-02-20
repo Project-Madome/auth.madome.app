@@ -29,27 +29,27 @@ spec:
                         value: "3112"
                       - name: AWS_ACCESS_KEY_ID
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-auth-secret
                                 key: aws_access_key_id
                       - name: AWS_SECRET_ACCESS_KEY
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-auth-secret
                                 key: aws_secret_access_key
                       - name: REDIS_URL
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-auth-secret
                                 key: redis_url
                       - name: MADOME_USER_URL
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-auth-secret
                                 key: madome_user_url
                       - name: MADOME_E2E_CHANNEL_URL
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-auth-secret
                                 key: madome_e2e_channel_url
 ---
