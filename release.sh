@@ -42,6 +42,8 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "\n"
+echo "\n"
 echo "succeed release\n"
 
 github-release -v upload \
@@ -56,4 +58,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "\n"
+echo "\n"
 echo "succeed upload"
