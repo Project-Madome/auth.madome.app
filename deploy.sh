@@ -57,6 +57,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-if [ "$CURRENT_BRANCH" != "stable" ] || [ "$CURRENT_BRANCH" != "beta" ]; then
+if [ "$CURRENT_BRANCH" != "stable" ]; then
     kubectl rollout restart deployment/madome-$SVC
 fi
