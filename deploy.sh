@@ -1,7 +1,7 @@
 SVC=auth
 
 CURRENT_BRANCH="$(git branch --show-current)"
-BIN="./bin/${CURRENT_BRANCH}-$VERSION"
+BIN="./bin/${CURRENT_BRANCH}/$VERSION"
 
 VERSION="$(cat Cargo.toml | grep 'version = ' | head -1 | sed -e 's/version = //' | sed -e 's/\"//g')"
 
