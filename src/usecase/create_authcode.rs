@@ -1,11 +1,14 @@
 use std::sync::Arc;
 
+use hyper::{Body, Request};
 use serde::Deserialize;
+use util::{r#async::AsyncTryFrom, FromRequest};
 
 use crate::{
     command::CommandSet,
     entity::authcode::Authcode,
     error::UseCaseError,
+    msg::Wrap,
     repository::{r#trait::AuthcodeRepository, RepositorySet},
 };
 
@@ -13,6 +16,37 @@ use crate::{
 pub struct Payload {
     #[serde(rename = "email")]
     pub user_email: String,
+
+    /// use this only debug build and e2e testing
+    /// true => send email
+    /// false => don't send email
+    #[serde(default)]
+    pub ses_flag: bool,
+}
+
+#[async_trait::async_trait]
+impl FromRequest for Payload {
+    type Error = crate::Error;
+    type Parameter = ();
+
+    async fn from_request(
+        _parameter: Self::Parameter,
+        request: Request<Body>,
+    ) -> Result<Self, Self::Error> {
+        #[cfg(debug_assertions)]
+        let ses_flag = request
+            .headers()
+            .get(madome_sdk::api::header::MADOME_E2E_TEST)
+            .is_none();
+
+        let payload: Self = Wrap::async_try_from(request).await?.inner();
+
+        Ok(Self {
+            #[cfg(debug_assertions)]
+            ses_flag,
+            ..payload
+        })
+    }
 }
 
 pub struct Model;
@@ -33,7 +67,10 @@ impl From<Error> for crate::Error {
 }
 
 pub async fn execute(
-    Payload { user_email }: Payload,
+    Payload {
+        user_email,
+        ses_flag,
+    }: Payload,
     repository: Arc<RepositorySet>,
     command: Arc<CommandSet>,
 ) -> crate::Result<Model> {
@@ -64,7 +101,9 @@ pub async fn execute(
         }
         #[cfg(debug_assertions)]
         {
-            command.send_email(user.email.clone(), code.clone()).await?;
+            if ses_flag {
+                command.send_email(user.email.clone(), code.clone()).await?;
+            }
         }
     }
 

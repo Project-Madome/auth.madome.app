@@ -1,5 +1,5 @@
 MINIKUBE=$1
-UPDATE=$2 // update flag
+UPDATE=$2 # update flag
 
 SVC=auth
 

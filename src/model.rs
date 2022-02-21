@@ -1,5 +1,5 @@
 use hyper::{header, http::response::Builder as ResponseBuilder, Body, Response, StatusCode};
-use madome_sdk::auth::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
+use madome_sdk::api::header::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
 use util::http::{SetCookie, SetCookieOptions, SetHeaders};
 
 use crate::{

@@ -1,7 +1,7 @@
 use std::{convert::TryFrom, sync::Arc};
 
 use hyper::{Body, Request};
-use madome_sdk::auth::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
+use madome_sdk::api::header::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
 use serde::Deserialize;
 use util::http::Cookie;
 
