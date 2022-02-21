@@ -1,5 +1,3 @@
-MINIKUBE=$1
-
 SVC=auth
 
 CURRENT_BRANCH="$(git branch --show-current)"
@@ -16,10 +14,6 @@ if [ "$CURRENT_BRANCH" != "stable" ] && [ "$CURRENT_BRANCH" != "beta" ]; then
     fi
 
     kubectl apply -f k8s_node_port.yml
-
-    if [ ! -f $BIN ]; then
-        exit 1
-    fi
 
     VERSION="latest"
 
