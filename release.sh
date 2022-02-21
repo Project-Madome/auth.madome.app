@@ -9,7 +9,7 @@ VERSION="$(cat Cargo.toml | grep 'version = ' | head -1 | sed -e 's/version = //
 if [ "$CURRENT_BRANCH" = "beta" ]; then
     TARGET="debug"
 
-    cargo build --debug --target=x86_64-unknown-linux-musl
+    cargo build --target=x86_64-unknown-linux-musl
 elif [ "$CURRENT_BRANCH" = "stable" ]; then
     TARGET="release"
 
