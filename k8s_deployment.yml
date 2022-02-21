@@ -14,7 +14,7 @@ spec:
         spec:
             containers:
                 - name: madome-auth
-                  image: madome-auth:{VERSION}
+                  image: madome/auth:{VERSION}
                   imagePullPolicy: IfNotPresent
                   resources:
                       limits:
