@@ -1,3 +1,5 @@
+MINIKUBE=$1
+
 SVC=auth
 
 CURRENT_BRANCH="$(git branch --show-current)"
@@ -41,11 +43,21 @@ fi
 
 chmod +x $BIN
 
-docker build --build-arg BINARY_FILE="$BIN" --tag "madome-user:$VERSION" .
+docker build --build-arg BINARY_FILE="$BIN" --tag "madome-$SVC:$VERSION" .
 
 if [ $? -ne 0 ]; then
     echo "failed docker build"
     exit 1
+fi
+
+if [ "$MINIKUBE" = "true" ]; then
+    echo "minikube load image"
+    minikube image load "madome-$SVC:$VERSION"
+
+    if [ $? -ne 0 ]; then
+        echo "failed docker build"
+        exit 1
+    fi
 fi
 
 cat k8s_deployment.yml | \
