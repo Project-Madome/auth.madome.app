@@ -6,14 +6,16 @@ SVC=auth
 CURRENT_BRANCH="$(git branch --show-current)"
 VERSION="$(cat Cargo.toml | grep 'version = ' | head -1 | sed -e 's/version = //' | sed -e 's/\"//g')"
 
+BUILD_OPTS="--features aws-ses --target=x86_64-unknown-linux-musl"
+
 if [ "$CURRENT_BRANCH" = "beta" ]; then
     TARGET="debug"
 
-    cargo build --features aws-ses --target=x86_64-unknown-linux-musl
+    cargo build $BUILD_OPTS
 elif [ "$CURRENT_BRANCH" = "stable" ]; then
     TARGET="release"
 
-    cargo build --release --features aws-ses --target=x86_64-unknown-linux-musl
+    cargo build --release $BUILD_OPTS
 else
     echo "can't release from master branch"
     exit 1
