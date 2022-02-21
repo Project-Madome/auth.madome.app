@@ -1,4 +1,5 @@
 MINIKUBE=$1
+UPDATE=$2 // update flag
 
 SVC=auth
 
@@ -23,7 +24,7 @@ if [ "$CURRENT_BRANCH" != "stable" ] && [ "$CURRENT_BRANCH" != "beta" ]; then
 else
     if [ ! -f $BIN ]; then
         echo "binary file download"
-        ./update.sh
+        ./update.sh $UPDATE
     fi
 
     if [ ! -f $BIN ]; then

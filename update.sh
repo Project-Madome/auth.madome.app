@@ -1,4 +1,5 @@
 # beta, stable 따로 구분해서 받아올 수 있어야함
+UPDATE=$1
 
 SVC=auth
 
@@ -6,11 +7,13 @@ CURRENT_BRANCH="$(git branch --show-current)"
 VERSION="$(cat Cargo.toml | grep 'version = ' | head -1 | sed -e 's/version = //' | sed -e 's/\"//g')"
 
 if [ "$CURRENT_BRANCH" = "beta" ] || [ "$CURRENT_BRANCH" = "stable" ]; then
-    git pull
+    if [ "$UPDATE" = "true" ]; then
+        git pull
 
-    if [ $? -ne 0 ]; then
-        echo "failed git pull";
-        exit 1
+        if [ $? -ne 0 ]; then
+            echo "failed git pull";
+            exit 1
+        fi
     fi
 
     github-release -v download \
