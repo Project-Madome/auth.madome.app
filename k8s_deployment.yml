@@ -15,7 +15,7 @@ spec:
             containers:
                 - name: madome-auth
                   image: madome-auth:{VERSION}
-                  imagePullPolicy: Never
+                  imagePullPolicy: IfNotPresent
                   resources:
                       limits:
                           memory: "512Mi"
