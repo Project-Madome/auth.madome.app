@@ -56,9 +56,16 @@ pub async fn execute(
         return Err(Error::TooManyCreatedAuthcode.into());
     }
 
-    #[cfg(not(debug_assertions))]
+    #[cfg(feature = "aws-ses")]
     {
-        command.send_email(user.email, code).await?;
+        #[cfg(not(debug_assertions))]
+        {
+            command.send_email(user.email, code).await?;
+        }
+        #[cfg(debug_assertions)]
+        {
+            command.send_email(user.email.clone(), code.clone()).await?;
+        }
     }
 
     // e2e channel server에 보냄

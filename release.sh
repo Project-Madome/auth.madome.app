@@ -9,11 +9,11 @@ VERSION="$(cat Cargo.toml | grep 'version = ' | head -1 | sed -e 's/version = //
 if [ "$CURRENT_BRANCH" = "beta" ]; then
     TARGET="debug"
 
-    cargo build --target=x86_64-unknown-linux-musl
+    cargo build --features aws-ses --target=x86_64-unknown-linux-musl
 elif [ "$CURRENT_BRANCH" = "stable" ]; then
     TARGET="release"
 
-    cargo build --release --target=x86_64-unknown-linux-musl
+    cargo build --release --features aws-ses --target=x86_64-unknown-linux-musl
 else
     echo "can't release from master branch"
     exit 1
