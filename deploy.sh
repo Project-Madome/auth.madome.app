@@ -1,14 +1,10 @@
 SVC=auth
 
 CURRENT_BRANCH="$(git branch --show-current)"
-BIN="./bin/${CURRENT_BRANCH}/$VERSION"
 
 VERSION="$(cat Cargo.toml | grep 'version = ' | head -1 | sed -e 's/version = //' | sed -e 's/\"//g')"
 
-if [ $? -ne 0 ]; then
-    echo "failed parsing versio from Cargo.toml"
-    exit 1
-fi
+BIN="./bin/${CURRENT_BRANCH}/$VERSION"
 
 if [ "$CURRENT_BRANCH" != "stable" ] && [ "$CURRENT_BRANCH" != "beta" ]; then
     cargo build --target=x86_64-unknown-linux-musl
