@@ -10,7 +10,7 @@ if [ "$CURRENT_BRANCH" = "beta" ]; then
     TARGET="debug"
 
     cargo build --debug --target=x86_64-unknown-linux-musl
-else if [ "$CURRENT_BRANCH" = "stable" ]; then
+elif [ "$CURRENT_BRANCH" = "stable" ]; then
     TARGET="release"
 
     cargo build --release --target=x86_64-unknown-linux-musl
@@ -49,8 +49,7 @@ github-release -v upload \
     --repo "$SVC.madome.app" \
     --tag "${CURRENT_BRANCH}/${VERSION}" \
     --name "${CURRENT_BRANCH}-$VERSION" \
-    # --name "madome-user-linux-x86_64" \
-    --file ./target/x86_64-unknown-linux-musl/$TARGET/madome-$SVC
+    --file "./target/x86_64-unknown-linux-musl/$TARGET/madome-$SVC"
 
 if [ $? -ne 0 ]; then
     echo "failed upload"
