@@ -10,7 +10,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-if [ "$CURRENT_BRANCH" != "stable" ] || [ "$CURRENT_BRANCH" != "beta" ]; then
+if [ "$CURRENT_BRANCH" != "stable" ] && [ "$CURRENT_BRANCH" != "beta" ]; then
     cargo build --target=x86_64-unknown-linux-musl
 
     if [ $? -ne 0 ]; then
