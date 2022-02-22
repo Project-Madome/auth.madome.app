@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use hyper::{http::response::Builder as ResponseBuilder, Body, Method, Request};
 use serde::de::DeserializeOwned;
 
-use util::{r#async::AsyncTryFrom, ReadChunks};
+use util::{r#async::AsyncTryFrom, IntoPayload, ReadChunks};
 
 use crate::usecase::{
     check_access_token, check_and_refresh_token_pair, check_authcode, create_authcode,
@@ -49,9 +49,7 @@ impl Msg {
                 Msg::CreateTokenPair(Wrap::async_try_from(request).await?.inner())
             }
             (Method::PATCH, "/auth/token") => Msg::CheckAndRefreshTokenPair(request.try_into()?),
-            (Method::POST, "/auth/code") => {
-                Msg::CreateAuthcode(Wrap::async_try_from(request).await?.inner())
-            }
+            (Method::POST, "/auth/code") => Msg::CreateAuthcode(request.into_payload(()).await?),
 
             _ => return Err(Error::NotFound.into()),
         };

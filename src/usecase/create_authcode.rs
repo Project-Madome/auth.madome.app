@@ -39,6 +39,9 @@ impl FromRequest for Payload {
             .get(madome_sdk::api::header::MADOME_E2E_TEST)
             .is_none();
 
+        #[cfg(debug_assertions)]
+        log::debug!("ses_flag = {ses_flag}");
+
         let payload: Self = Wrap::async_try_from(request).await?.inner();
 
         Ok(Self {
