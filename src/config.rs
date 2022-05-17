@@ -53,7 +53,7 @@ impl Config {
         self.redis_url.as_ref().unwrap()
     }
 
-    pub fn madome_user_server(&self) -> &str {
+    pub fn madome_user_url(&self) -> &str {
         self.madome_user_server.as_ref().unwrap()
     }
 

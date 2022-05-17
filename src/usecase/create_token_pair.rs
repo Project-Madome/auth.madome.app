@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
+use either::Either;
+use uuid::Uuid;
+
 use crate::{
     command::CommandSet,
     entity::{secret_key::SecretKey, token::Token},
     error::UseCaseError,
-    model::TokenPair,
     repository::{r#trait::SecretKeyRepository, RepositorySet},
 };
 
@@ -12,7 +14,7 @@ use super::check_authcode;
 
 pub enum Payload {
     UserEmail(String),
-    UserId(String),
+    UserId(Uuid),
 }
 
 impl From<check_authcode::Model> for Payload {
@@ -27,7 +29,15 @@ impl From<check_authcode::Model> for Payload {
     }
 } */
 
-pub type Model = TokenPair;
+// pub type Model = TokenPair;
+
+#[derive(Debug)]
+pub struct Model {
+    pub access_token: String,
+    pub refresh_token: String,
+    pub token_id: Uuid,
+    pub user_id: Uuid,
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -51,16 +61,15 @@ pub async fn execute(
 ) -> crate::Result<Model> {
     let user_id = match payload {
         Payload::UserId(user_id) => user_id,
-        Payload::UserEmail(user_email) => match command.get_user_info(user_email).await? {
-            Some(user) => user.id,
-            None => return Err(Error::NotFoundUser.into()),
-        },
+        Payload::UserEmail(user_email) => {
+            command.get_user_info(Either::Right(user_email)).await?.id
+        }
     };
 
     let token = Token::new(user_id);
     let secret_key = SecretKey::new();
 
-    let secret_key_added = repository.secret_key().add(&token.id, &secret_key).await?;
+    let secret_key_added = repository.secret_key().add(token.id, &secret_key).await?;
 
     if !secret_key_added {
         return Err(Error::CannotAddedSecretKey.into());
@@ -71,6 +80,8 @@ pub async fn execute(
     Ok(Model {
         access_token,
         refresh_token,
+        token_id: token.id,
+        user_id: token.user_id,
     })
 }
 
@@ -94,12 +105,12 @@ mod tests {
 
         test_registry!(
         [repository: RepositorySet, command: CommandSet] ->
-        [user_id: String] ->
+        [user_id: Uuid] ->
         {
-            user_id = Uuid::new_v4().to_string();
+            user_id = Uuid::new_v4();
         },
         {
-            let payload = create_token_pair::Payload::UserId(user_id.clone());
+            let payload = create_token_pair::Payload::UserId(user_id);
             let r = create_token_pair::execute(payload, repository.clone(), command.clone()).await.unwrap();
 
             let payload = check_token_pair::Payload {

@@ -6,7 +6,6 @@ pub mod config;
 pub mod database;
 pub mod entity;
 pub mod error;
-pub mod json;
 pub mod model;
 pub mod msg;
 pub mod registry;

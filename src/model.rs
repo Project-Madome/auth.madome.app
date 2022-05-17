@@ -1,10 +1,12 @@
 use hyper::{header, http::response::Builder as ResponseBuilder, Body, Response, StatusCode};
-use madome_sdk::api::header::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
+use madome_sdk::api::cookie::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
 use util::http::{SetCookie, SetCookieOptions, SetHeaders};
 
 use crate::{
     into_model,
-    usecase::{check_access_token, check_and_refresh_token_pair, create_authcode},
+    usecase::{
+        check_access_token, check_and_refresh_token_pair, create_authcode, create_token_pair,
+    },
 };
 
 #[cfg_attr(test, derive(Default))]
@@ -22,6 +24,7 @@ into_model![
         CheckAndRefreshTokenPair,
         check_and_refresh_token_pair::Model
     ),
+    (CreateTokenPair, create_token_pair::Model),
 ];
 
 pub trait Presenter: Sized {
@@ -83,7 +86,7 @@ impl Presenter for TokenPair {
 
 impl Presenter for check_access_token::Model {
     fn to_http(self, response: ResponseBuilder) -> Response<Body> {
-        let serialized = serde_json::to_string(&self).expect("json serialize");
+        let serialized = serde_json::to_vec(&self).expect("json serialize");
 
         response
             .status(StatusCode::OK)
@@ -95,7 +98,7 @@ impl Presenter for check_access_token::Model {
 
 impl Presenter for check_and_refresh_token_pair::Model {
     fn to_http(self, mut response: ResponseBuilder) -> Response<Body> {
-        let serialized = serde_json::to_string(&self).expect("json serialize");
+        let serialized = serde_json::to_vec(&self).expect("json serialize");
 
         if let (Some(access_token), Some(refresh_token)) = (self.access_token, self.refresh_token) {
             let token_pair = TokenPair {
@@ -110,6 +113,17 @@ impl Presenter for check_and_refresh_token_pair::Model {
             .header(header::CONTENT_TYPE, "application/json")
             .body(serialized.into())
             .unwrap()
+    }
+}
+
+impl Presenter for create_token_pair::Model {
+    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
+        let token_pair = TokenPair {
+            access_token: self.access_token,
+            refresh_token: self.refresh_token,
+        };
+
+        token_pair.to_http(response)
     }
 }
 

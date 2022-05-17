@@ -1,21 +1,27 @@
+use either::Either;
+use madome_sdk::api::user::{get_user, model};
 use sai::{Component, Injected};
+use uuid::Uuid;
 
-use crate::{command::r#trait::Command, config::Config, error::CommandError, json::user::UserInfo};
+use crate::{command::r#trait::Command, config::Config, error::CommandError};
 
 #[derive(Component)]
-pub struct GetUserInfo {
+pub struct GetUser {
     #[injected]
     config: Injected<Config>,
 }
 
-impl r#trait::GetUserInfo for GetUserInfo {}
+impl r#trait::GetUser for GetUser {}
 
 #[async_trait::async_trait]
-impl Command<String, Option<UserInfo>> for GetUserInfo {
+impl Command<Either<Uuid, String>, model::User> for GetUser {
     type Error = crate::Error;
 
-    async fn execute(&self, user_id_or_email: String) -> Result<Option<UserInfo>, Self::Error> {
-        let url = format!(
+    async fn execute(
+        &self,
+        user_id_or_email: Either<Uuid, String>,
+    ) -> Result<model::User, Self::Error> {
+        /* let url = format!(
             "{}/users/{}",
             self.config.madome_user_server(),
             user_id_or_email
@@ -27,17 +33,16 @@ impl Command<String, Option<UserInfo>> for GetUserInfo {
             return Ok(None);
         }
 
-        let user_info = res.json::<UserInfo>().await.map_err(Error::from)?;
+        let user_info = res.json::<UserInfo>().await.map_err(Error::from)?; */
 
-        Ok(Some(user_info))
+        let user = get_user(self.config.madome_user_url(), "", user_id_or_email).await?;
+
+        Ok(user)
     }
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("reqwest: {0}")]
-    Reqwest(#[from] reqwest::Error),
-}
+pub enum Error {}
 
 impl From<Error> for crate::Error {
     fn from(err: Error) -> Self {
@@ -46,45 +51,58 @@ impl From<Error> for crate::Error {
 }
 
 pub mod r#trait {
-    use crate::{command::r#trait::Command, json::user::UserInfo};
+    use either::Either;
+    use madome_sdk::api::user::model;
+    use uuid::Uuid;
 
-    pub trait GetUserInfo: Command<String, Option<UserInfo>, Error = crate::Error> {}
+    use crate::command::r#trait::Command;
+
+    pub trait GetUser: Command<Either<Uuid, String>, model::User, Error = crate::Error> {}
 }
 
 #[cfg(test)]
 pub mod tests {
     // test command implements here..
 
+    use either::Either;
+    use madome_sdk::api::user::model;
     use sai::Component;
+    use uuid::Uuid;
 
-    use crate::{command::r#trait::Command, json::user::UserInfo};
+    use crate::command::r#trait::Command;
 
     use super::r#trait;
 
     #[derive(Component, Default)]
-    pub struct GetUserInfo {
-        users: Vec<UserInfo>,
+    pub struct GetUser {
+        users: Vec<model::User>,
     }
 
-    impl From<UserInfo> for GetUserInfo {
-        fn from(user: UserInfo) -> Self {
+    impl From<model::User> for GetUser {
+        fn from(user: model::User) -> Self {
             Self { users: vec![user] }
         }
     }
 
-    impl r#trait::GetUserInfo for GetUserInfo {}
+    impl r#trait::GetUser for GetUser {}
 
     #[async_trait::async_trait]
-    impl Command<String, Option<UserInfo>> for GetUserInfo {
+    impl Command<Either<Uuid, String>, model::User> for GetUser {
         type Error = crate::Error;
 
-        async fn execute(&self, id_or_email: String) -> Result<Option<UserInfo>, Self::Error> {
-            let user = self
-                .users
-                .iter()
-                .find(|user| user.id == id_or_email || user.email == id_or_email);
+        async fn execute(
+            &self,
+            id_or_email: Either<Uuid, String>,
+        ) -> Result<model::User, Self::Error> {
+            let user = self.users.iter().find(|user| match &id_or_email {
+                Either::Left(user_id) => user_id == &user.id,
+                Either::Right(user_email) => user_email == &user.email,
+            });
 
-            Ok(user.cloned())
+            match user {
+                Some(user) => Ok(user.clone()),
+                None => Err(crate::Error::Test("not found user")),
+            }
         }
     }
 }

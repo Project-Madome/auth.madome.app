@@ -23,6 +23,13 @@ pub enum Error {
     // TODO: 나중에 위치 재선정
     #[error("ReadChunksFromBody")]
     ReadChunksFromBody(#[from] hyper::Error),
+
+    #[error("UserSdk: {0}")]
+    UserSdk(#[from] madome_sdk::api::user::Error),
+
+    #[cfg(test)]
+    #[error("{0}")]
+    Test(&'static str),
 }
 
 type Msg = crate::msg::Error;
@@ -139,6 +146,32 @@ impl From<Error> for Response<Body> {
                     .status(StatusCode::FORBIDDEN)
                     .headers(SetCookie::from(token_pair).iter())
                     .body(err_str.into())
+            }
+
+            UserSdk(ref err) => {
+                use madome_sdk::api::{
+                    user::{get_user, Error as UserError},
+                    BaseError,
+                };
+
+                match err {
+                    UserError::Base(err) => match err {
+                        BaseError::Undefined(code, body) => {
+                            response.status(code).body(body.to_string().into())
+                        }
+                        _ => response
+                            .status(StatusCode::INTERNAL_SERVER_ERROR)
+                            .body(err.to_string().into()),
+                    },
+                    UserError::GetUser(err) => match err {
+                        get_user::Error::NotFoundUser => response
+                            .status(StatusCode::NOT_FOUND)
+                            .body(err.to_string().into()),
+                    },
+                    _ => response
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body(err.to_string().into()),
+                }
             }
 
             err => response

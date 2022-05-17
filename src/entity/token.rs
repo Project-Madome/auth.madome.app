@@ -49,8 +49,8 @@ pub mod jwt {
 #[cfg_attr(test, derive(Default))]
 #[derive(Debug, Clone)]
 pub struct Token {
-    pub id: String,
-    pub user_id: String,
+    pub id: Uuid,
+    pub user_id: Uuid,
 }
 
 #[cfg_attr(test, derive(Default, Clone))]
@@ -61,8 +61,8 @@ pub struct AccessToken {
     pub iat: i64,
     pub exp: i64,
 
-    pub id: String,
-    pub user_id: String,
+    pub id: Uuid,
+    pub user_id: Uuid,
 
     /// placeholder for access token
     ///
@@ -108,8 +108,8 @@ pub struct RefreshToken {
     pub iat: i64,
     pub exp: i64,
 
-    pub id: String,
-    pub user_id: String,
+    pub id: Uuid,
+    pub user_id: Uuid,
 
     /// placeholder for refresh token
     ///
@@ -144,8 +144,8 @@ impl From<Token> for RefreshToken {
 }
 
 impl Token {
-    pub fn new(user_id: String) -> Self {
-        let id = Uuid::new_v4().to_string();
+    pub fn new(user_id: Uuid) -> Self {
+        let id = Uuid::new_v4();
 
         Self { id, user_id }
     }

@@ -1,9 +1,11 @@
 use std::{collections::HashMap, convert::TryFrom, sync::Arc};
 
+use either::Either;
 use hyper::{Body, Request};
-use madome_sdk::api::header::MADOME_ACCESS_TOKEN;
+use madome_sdk::api::cookie::MADOME_ACCESS_TOKEN;
 use serde::Serialize;
 use util::{http::Cookie, ori};
+use uuid::Uuid;
 
 use crate::{
     command::CommandSet,
@@ -41,8 +43,8 @@ impl TryFrom<Request<Body>> for Payload {
 #[derive(Debug, Serialize)]
 pub struct Model {
     #[serde(skip_serializing)]
-    pub token_id: String,
-    pub user_id: String,
+    pub token_id: Uuid,
+    pub user_id: Uuid,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -66,7 +68,7 @@ async fn deserialize(
 ) -> crate::Result<Option<AccessToken>> {
     let token_id = ori!(AccessToken::deserialize_payload(access_token)).id;
 
-    let SecretKey(secret_key) = ori!(secret_key_repository.get(&token_id).await?);
+    let SecretKey(secret_key) = ori!(secret_key_repository.get(token_id).await?);
 
     let token_data = ori!(AccessToken::deserialize(
         access_token,
@@ -94,10 +96,9 @@ pub async fn execute(
     };
 
     if let Some(minimum_role) = minimum_role {
-        let user = match command.get_user_info(token_data.user_id.clone()).await? {
-            Some(user) => user,
-            None => return Err(Error::UnauthorizedAccessToken.into()),
-        };
+        let user = command
+            .get_user_info(Either::Left(token_data.user_id))
+            .await?;
 
         if user.role < minimum_role {
             return Err(Error::PermissionDenied.into());
@@ -112,13 +113,14 @@ pub async fn execute(
 
 #[cfg(test)]
 mod tests {
+    use chrono::Utc;
+    use madome_sdk::api::user::model::User;
     use sai::{Component, System};
     use util::{assert_debug, test_registry};
     use uuid::Uuid;
 
     use crate::command::{self, CommandSet};
     use crate::entity::token::Token;
-    use crate::json::user::UserInfo;
     use crate::repository::{r#trait::SecretKeyRepository, RepositorySet};
     use crate::usecase::check_access_token::{self, Payload};
 
@@ -130,15 +132,15 @@ mod tests {
 
         test_registry!(
         [repository: RepositorySet, command: CommandSet] ->
-        [secret_key: String, user_id: String, token: Token] ->
+        [secret_key: String, user_id: Uuid, token: Token] ->
         {
             secret_key = "secret1234".to_string();
-            user_id = Uuid::new_v4().to_string();
-            token = Token::new(user_id.clone());
+            user_id = Uuid::new_v4();
+            token = Token::new(user_id);
 
             repository
                 .secret_key()
-                .add(&token.id, &secret_key)
+                .add(token.id, &secret_key)
                 .await
                 .unwrap();
         },
@@ -167,22 +169,25 @@ mod tests {
 
         test_registry!(
         [repository: RepositorySet, command: CommandSet] ->
-        [secret_key: String, user_id: String, token: Token] ->
+        [secret_key: String, user_id: Uuid, token: Token] ->
         {
             secret_key = "secret1234".to_string();
-            user_id = Uuid::new_v4().to_string();
-            token = Token::new(user_id.clone());
+            user_id = Uuid::new_v4();
+            token = Token::new(user_id);
 
             repository
                 .secret_key()
-                .add(&token.id, &secret_key)
+                .add(token.id, &secret_key)
                 .await
                 .unwrap();
 
-            let get_user_info = command::tests::GetUserInfo::from(UserInfo {
-                id: user_id.clone(),
+            let get_user_info = command::tests::GetUser::from(User {
+                id: user_id,
                 email: "".to_string(),
                 role: 1,
+                name: "".to_string(),
+                created_at: Utc::now(),
+                updated_at: Utc::now()
             });
 
             command.set_get_user_info(get_user_info);
@@ -212,22 +217,25 @@ mod tests {
 
         test_registry!(
         [repository: RepositorySet, command: CommandSet] ->
-        [secret_key: String, user_id: String, token: Token] ->
+        [secret_key: String, user_id: Uuid, token: Token] ->
         {
             secret_key = "secret1234".to_string();
-            user_id = Uuid::new_v4().to_string();
-            token = Token::new(user_id.clone());
+            user_id = Uuid::new_v4();
+            token = Token::new(user_id);
 
             repository
                 .secret_key()
-                .add(&token.id, &secret_key)
+                .add(token.id, &secret_key)
                 .await
                 .unwrap();
 
-            let get_user_info = command::tests::GetUserInfo::from(UserInfo {
-                id: user_id.clone(),
+            let get_user_info = command::tests::GetUser::from(User {
+                id: user_id,
                 email: "".to_string(),
                 role: 0,
+                name: "".to_string(),
+                created_at: Utc::now(),
+                updated_at: Utc::now()
             });
 
             command.set_get_user_info(get_user_info);
@@ -259,22 +267,25 @@ mod tests {
         // check_access_token::deserialize 함수에서 None을 리턴하면 Unauthorized 에러가 난다는 것만 테스트하면 됨
         test_registry!(
         [repository: RepositorySet, command: CommandSet] ->
-        [secret_key: String, user_id: String, token: Token] ->
+        [secret_key: String, user_id: Uuid, token: Token] ->
         {
             secret_key = "secret1234".to_string();
-            user_id = Uuid::new_v4().to_string();
-            token = Token::new(user_id.clone());
+            user_id = Uuid::new_v4();
+            token = Token::new(user_id);
 
             repository
                 .secret_key()
-                .add(&token.id, &secret_key)
+                .add(token.id, &secret_key)
                 .await
                 .unwrap();
 
-            let get_user_info = command::tests::GetUserInfo::from(UserInfo {
-                id: user_id.clone(),
+            let get_user_info = command::tests::GetUser::from(User {
+                id: user_id,
                 email: "".to_string(),
                 role: 0,
+                name: "".to_string(),
+                created_at: Utc::now(),
+                updated_at: Utc::now()
             });
 
             command.set_get_user_info(get_user_info);

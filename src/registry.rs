@@ -5,7 +5,7 @@ mod root_registry {
 
     use crate::{
         app::{HttpServer, Resolver},
-        command::{random_code::RandomCode, send_email::SendEmail, CommandSet, GetUserInfo},
+        command::{random_code::RandomCode, send_email::SendEmail, CommandSet, GetUser},
         config::Config,
         database::DatabaseSet,
         repository::{RedisAuthcodeRepository, RedisSecretKeyRepository, RepositorySet},
@@ -38,7 +38,7 @@ mod root_registry {
 
     component_registry!(
         CommandRegistry,
-        [CommandSet, GetUserInfo, RandomCode, SendEmail]
+        [CommandSet, GetUser, RandomCode, SendEmail]
     );
 
     component_registry!(ConfigRegistry, [Config]);

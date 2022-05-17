@@ -1,9 +1,10 @@
 use std::{convert::TryFrom, sync::Arc};
 
 use hyper::{Body, Request};
-use madome_sdk::api::header::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
+use madome_sdk::api::cookie::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
 use serde::Deserialize;
 use util::http::Cookie;
+use uuid::Uuid;
 
 use crate::{command::CommandSet, error::UseCaseError, repository::RepositorySet};
 
@@ -42,8 +43,8 @@ impl From<(String, String)> for Payload {
 
 #[derive(Debug)]
 pub struct Model {
-    pub user_id: String,
-    pub token_id: String,
+    pub user_id: Uuid,
+    pub token_id: Uuid,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -95,6 +96,8 @@ pub async fn execute(
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use sai::{Component, System};
     use util::{assert_debug, test_registry};
     use uuid::Uuid;
@@ -114,15 +117,15 @@ mod tests {
 
         test_registry!(
         [repository: RepositorySet, command: CommandSet] ->
-        [secret_key: String, user_id: String, token: Token] ->
+        [secret_key: String, user_id: Uuid, token: Token] ->
         {
             secret_key = "secret0382".to_string();
-            user_id = Uuid::new_v4().to_string();
-            token = Token::new(user_id.clone());
+            user_id = Uuid::new_v4();
+            token = Token::new(user_id);
 
             repository
                 .secret_key()
-                .add(&token.id, &secret_key)
+                .add(token.id, &secret_key)
                 .await
                 .unwrap();
         },
@@ -150,25 +153,25 @@ mod tests {
 
         test_registry!(
         [repository: RepositorySet, command: CommandSet] ->
-        [secret_key: String, user_id: String, a_token: Token, b_token: Token] ->
+        [secret_key: String, user_id: Uuid, a_token: Token, b_token: Token] ->
         {
             secret_key = "secret03223".to_string();
-            user_id = Uuid::new_v4().to_string();
-            a_token = Token::new(user_id.clone());
-            b_token = Token::new(user_id.clone());
+            user_id = Uuid::new_v4();
+            a_token = Token::new(user_id);
+            b_token = Token::new(user_id);
 
-            a_token.id = "96e220fe-cb9b-40f5-9f88-0c023a349b59".to_string();
-            b_token.id = "d344c1db-8a6d-42d1-bc2d-d488ab8d46b6".to_string();
+            a_token.id = Uuid::from_str("96e220fe-cb9b-40f5-9f88-0c023a349b59").unwrap();
+            b_token.id = Uuid::from_str("d344c1db-8a6d-42d1-bc2d-d488ab8d46b6").unwrap();
 
             repository
                 .secret_key()
-                .add(&a_token.id, &secret_key)
+                .add(a_token.id, &secret_key)
                 .await
                 .unwrap();
 
             repository
                 .secret_key()
-                .add(&b_token.id, &secret_key)
+                .add(b_token.id, &secret_key)
                 .await
                 .unwrap();
         },
@@ -197,22 +200,22 @@ mod tests {
 
         test_registry!(
         [repository: RepositorySet, command: CommandSet] ->
-        [secret_key: String, a_user_id: String, b_user_id: String, a_token: Token, b_token: Token] ->
+        [secret_key: String, a_user_id: Uuid, b_user_id: Uuid, a_token: Token, b_token: Token] ->
         {
             secret_key = "secret03458".to_string();
-            a_user_id = "bf4cf9fe-961f-4aba-a11b-17cf43c7ed39".to_string();
-            b_user_id = "7a129706-4458-493c-a0b9-11f5a57fffa7".to_string();
-            a_token = Token::new(a_user_id.clone());
-            b_token = Token::new(b_user_id.clone());
+            a_user_id = Uuid::from_str("bf4cf9fe-961f-4aba-a11b-17cf43c7ed39").unwrap();
+            b_user_id = Uuid::from_str("7a129706-4458-493c-a0b9-11f5a57fffa7").unwrap();
+            a_token = Token::new(a_user_id);
+            b_token = Token::new(b_user_id);
 
-            b_token.id = a_token.id.clone();
+            b_token.id = a_token.id;
 
             // println!("{:?}", a_token);
             // println!("{:?}", b_token);
 
             repository
                 .secret_key()
-                .add(&a_token.id, &secret_key)
+                .add(a_token.id, &secret_key)
                 .await
                 .unwrap();
         },

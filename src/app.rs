@@ -11,6 +11,7 @@ use hyper::{
 use inspect::{Inspect, InspectOk};
 use sai::{Component, ComponentLifecycle, Injected};
 use tokio::sync::oneshot;
+use util::elapse;
 
 use crate::command::CommandSet;
 use crate::config::Config;
@@ -81,11 +82,11 @@ impl Resolver {
 async fn handler(request: Request<Body>, resolver: Arc<Resolver>) -> crate::Result<Response<Body>> {
     let response = Response::builder();
 
-    let (msg, response) = Msg::from_http(request, response).await?;
+    let (msg, response) = elapse!("route", Msg::from_http(request, response).await?);
 
-    let model = resolver.resolve(msg).await?;
+    let model = elapse!("execute", resolver.resolve(msg).await?);
 
-    let response = model.to_http(response);
+    let response = elapse!("present", model.to_http(response));
 
     Ok(response)
 }
@@ -247,7 +248,7 @@ mod tests {
 
         test_registry!(
         [(Injected) -> repository: RepositorySet, command: CommandSet] ->
-        [auth_socket_path: &str, user_id: String, secret_key: String, token: Token] ->
+        [auth_socket_path: &str, user_id: Uuid, secret_key: String, token: Token] ->
         {
             user_id = Uuid::new_v4().to_string();
             secret_key = "S3Cr#tK3y".to_string();

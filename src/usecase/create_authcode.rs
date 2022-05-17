@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
+use either::Either;
 use hyper::{Body, Request};
 use serde::Deserialize;
-use util::{r#async::AsyncTryFrom, FromRequest};
+use util::{r#async::AsyncTryFrom, FromOwnedRequest};
 
 use crate::{
     command::CommandSet,
@@ -25,11 +26,11 @@ pub struct Payload {
 }
 
 #[async_trait::async_trait]
-impl FromRequest for Payload {
+impl FromOwnedRequest for Payload {
     type Error = crate::Error;
     type Parameter = ();
 
-    async fn from_request(
+    async fn from_owned_request(
         _parameter: Self::Parameter,
         request: Request<Body>,
     ) -> Result<Self, Self::Error> {
@@ -77,10 +78,7 @@ pub async fn execute(
     repository: Arc<RepositorySet>,
     command: Arc<CommandSet>,
 ) -> crate::Result<Model> {
-    let user = match command.get_user_info(user_email).await? {
-        Some(user) => user,
-        None => return Err(Error::NotFoundUser.into()),
-    };
+    let user = command.get_user_info(Either::Right(user_email)).await?;
 
     let authcode_repository = repository.authcode();
 

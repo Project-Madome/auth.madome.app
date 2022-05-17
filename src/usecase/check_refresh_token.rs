@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use util::ori;
+use uuid::Uuid;
 
 use crate::{
     entity::{secret_key::SecretKey, token::RefreshToken},
@@ -14,8 +15,8 @@ pub struct Payload {
 
 #[derive(Debug)]
 pub struct Model {
-    pub token_id: String,
-    pub user_id: String,
+    pub token_id: Uuid,
+    pub user_id: Uuid,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -36,7 +37,7 @@ async fn deserialize(
 ) -> crate::Result<Option<RefreshToken>> {
     let token_id = ori!(RefreshToken::deserialize_payload(refresh_token)).id;
 
-    let SecretKey(secret_key) = ori!(secret_key_repository.get(&token_id).await?);
+    let SecretKey(secret_key) = ori!(secret_key_repository.get(token_id).await?);
 
     let token_data = ori!(RefreshToken::deserialize(refresh_token, &secret_key)).claims;
 
@@ -78,15 +79,15 @@ mod tests {
 
         test_registry!(
         [repository: RepositorySet] ->
-        [secret_key: String, user_id: String, token: Token] ->
+        [secret_key: String, user_id: Uuid, token: Token] ->
         {
             secret_key = "secret54231".to_string();
-            user_id = Uuid::new_v4().to_string();
-            token = Token::new(user_id.clone());
+            user_id = Uuid::new_v4();
+            token = Token::new(user_id);
 
             repository
                 .secret_key()
-                .add(&token.id, &secret_key)
+                .add(token.id, &secret_key)
                 .await
                 .unwrap();
         },
@@ -115,15 +116,15 @@ mod tests {
 
         test_registry!(
         [repository: RepositorySet] ->
-        [secret_key: String, user_id: String, token: Token] ->
+        [secret_key: String, user_id: Uuid, token: Token] ->
         {
             secret_key = "secret54231".to_string();
-            user_id = Uuid::new_v4().to_string();
-            token = Token::new(user_id.clone());
+            user_id = Uuid::new_v4();
+            token = Token::new(user_id);
 
             repository
                 .secret_key()
-                .add(&token.id, &secret_key)
+                .add(token.id, &secret_key)
                 .await
                 .unwrap();
         },

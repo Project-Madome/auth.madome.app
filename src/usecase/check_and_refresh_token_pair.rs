@@ -1,9 +1,10 @@
 use std::{collections::HashMap, convert::TryFrom, sync::Arc};
 
 use hyper::{Body, Request};
-use madome_sdk::api::header::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
+use madome_sdk::api::cookie::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
 use serde::Serialize;
 use util::http::Cookie;
+use uuid::Uuid;
 
 use crate::{
     command::CommandSet, error::UseCaseError, model::TokenPair, repository::RepositorySet,
@@ -45,8 +46,8 @@ pub struct Model {
     #[serde(skip_serializing)]
     pub refresh_token: Option<String>,
     #[serde(skip_serializing)]
-    pub token_id: String,
-    pub user_id: String,
+    pub token_id: Uuid,
+    pub user_id: Uuid,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -126,7 +127,7 @@ pub async fn execute(
             Ok(r)
         }
         Err(None) => {
-            let token_pair = refresh_token_pair::execute(
+            let t = refresh_token_pair::execute(
                 refresh_token_pair::Payload {
                     access_token,
                     refresh_token,
@@ -136,31 +137,37 @@ pub async fn execute(
             )
             .await?;
 
-            let r_check_access_token = check_access_token::execute(
-                check_access_token::Payload {
-                    access_token: token_pair.access_token.clone(),
-                    minimum_role,
-                    validate_exp: true,
-                },
-                repository,
-                command,
-            )
-            .await
-            .map_err(is_not_permission_denied);
+            let r = if let Some(minimum_role) = minimum_role {
+                let r = check_access_token::execute(
+                    check_access_token::Payload {
+                        access_token: t.access_token.clone(),
+                        minimum_role: Some(minimum_role),
+                        validate_exp: true,
+                    },
+                    repository,
+                    command,
+                )
+                .await
+                .map_err(is_not_permission_denied);
 
-            match r_check_access_token {
-                Ok(t) => Ok(Model {
-                    access_token: Some(token_pair.access_token),
-                    refresh_token: Some(token_pair.refresh_token),
+                Some(r)
+            } else {
+                None
+            };
+
+            match r {
+                None | Some(Ok(_)) => Ok(Model {
+                    access_token: Some(t.access_token),
+                    refresh_token: Some(t.refresh_token),
                     token_id: t.token_id,
                     user_id: t.user_id,
                 }),
-                Err(None) => Err(Error::PermissionDenied(TokenPair {
-                    access_token: token_pair.access_token,
-                    refresh_token: token_pair.refresh_token,
+                Some(Err(None)) => Err(Error::PermissionDenied(TokenPair {
+                    access_token: t.access_token,
+                    refresh_token: t.refresh_token,
                 })
                 .into()),
-                Err(Some(err)) => Err(err),
+                Some(Err(Some(err))) => Err(err),
             }
         }
     }
@@ -169,6 +176,7 @@ pub async fn execute(
 #[cfg(test)]
 mod tests {
     use chrono::Utc;
+    use madome_sdk::api::user::model::User;
     use sai::{Component, System};
     use util::{assert_debug, test_registry};
     use uuid::Uuid;
@@ -177,7 +185,6 @@ mod tests {
     use crate::entity::token::{
         self, AccessToken, RefreshToken, Token, ACCESS_TOKEN_EXP, REFRESH_TOKEN_EXP,
     };
-    use crate::json::user::UserInfo;
     use crate::model::TokenPair;
     use crate::repository::{r#trait::SecretKeyRepository, RepositorySet};
     use crate::usecase::check_access_token;
@@ -191,15 +198,15 @@ mod tests {
 
         test_registry!(
         [repository: RepositorySet, command: CommandSet] ->
-        [secret_key: String, user_id: String, token: Token] ->
+        [secret_key: String, user_id: Uuid, token: Token] ->
         {
             secret_key = "secret1234".to_string();
-            user_id = Uuid::new_v4().to_string();
-            token = Token::new(user_id.clone());
+            user_id = Uuid::new_v4();
+            token = Token::new(user_id);
 
             repository
                 .secret_key()
-                .add(&token.id, &secret_key)
+                .add(token.id, &secret_key)
                 .await
                 .unwrap();
         },
@@ -230,11 +237,11 @@ mod tests {
 
         test_registry!(
         [repository: RepositorySet, command: CommandSet] ->
-        [access_token: AccessToken, refresh_token: RefreshToken, secret_key: String, user_id: String, token: Token] ->
+        [access_token: AccessToken, refresh_token: RefreshToken, secret_key: String, user_id: Uuid, token: Token] ->
         {
             secret_key = "secret1234".to_string();
-            user_id = Uuid::new_v4().to_string();
-            token = Token::new(user_id.clone());
+            user_id = Uuid::new_v4();
+            token = Token::new(user_id);
 
             let now = Utc::now().timestamp();
 
@@ -243,8 +250,8 @@ mod tests {
                 iss: "madome.app".to_string(),
                 iat: now,
                 exp: now - ACCESS_TOKEN_EXP - 30,
-                id: token.id.clone(),
-                user_id: user_id.clone(),
+                id: token.id,
+                user_id,
                 _a: true,
             };
             refresh_token = RefreshToken {
@@ -252,14 +259,14 @@ mod tests {
                 iss: "madome.app".to_string(),
                 iat: now,
                 exp: now + REFRESH_TOKEN_EXP,
-                id: token.id.clone(),
-                user_id: user_id.clone(),
+                id: token.id,
+                user_id,
                 _r: true,
             };
 
             repository
                 .secret_key()
-                .add(&token.id, &secret_key)
+                .add(token.id, &secret_key)
                 .await
                 .unwrap();
         },
@@ -286,7 +293,7 @@ mod tests {
 
             let secret_key = repository
                 .secret_key()
-                .get(&p.id)
+                .get(p.id)
                 .await
                 .unwrap()
                 .unwrap();
@@ -304,22 +311,25 @@ mod tests {
 
         test_registry!(
         [repository: RepositorySet, command: CommandSet] ->
-        [secret_key: String, user_id: String, token: Token] ->
+        [secret_key: String, user_id: Uuid, token: Token] ->
         {
             secret_key = "secret1234".to_string();
-            user_id = Uuid::new_v4().to_string();
-            token = Token::new(user_id.clone());
+            user_id = Uuid::new_v4();
+            token = Token::new(user_id);
 
             repository
                 .secret_key()
-                .add(&token.id, &secret_key)
+                .add(token.id, &secret_key)
                 .await
                 .unwrap();
 
-            let get_user_info = command::tests::GetUserInfo::from(UserInfo {
-                id: user_id.clone(),
+            let get_user_info = command::tests::GetUser::from(User {
+                id: user_id,
                 email: "".to_string(),
-                role: 0
+                role: 0,
+                name: "".to_string(),
+                created_at: Utc::now(),
+                updated_at: Utc::now()
             });
 
             command.set_get_user_info(get_user_info);
@@ -350,11 +360,11 @@ mod tests {
 
         test_registry!(
         [repository: RepositorySet, command: CommandSet] ->
-        [access_token: AccessToken, refresh_token: RefreshToken, secret_key: String, user_id: String, token: Token] ->
+        [access_token: AccessToken, refresh_token: RefreshToken, secret_key: String, user_id: Uuid, token: Token] ->
         {
             secret_key = "secret1234".to_string();
-            user_id = Uuid::new_v4().to_string();
-            token = Token::new(user_id.clone());
+            user_id = Uuid::new_v4();
+            token = Token::new(user_id);
 
             let now = Utc::now().timestamp();
 
@@ -363,8 +373,8 @@ mod tests {
                 iss: "madome.app".to_string(),
                 iat: now,
                 exp: now - ACCESS_TOKEN_EXP - 30,
-                id: token.id.clone(),
-                user_id: user_id.clone(),
+                id: token.id,
+                user_id,
                 _a: true,
             };
             refresh_token = RefreshToken {
@@ -372,21 +382,24 @@ mod tests {
                 iss: "madome.app".to_string(),
                 iat: now,
                 exp: now + REFRESH_TOKEN_EXP,
-                id: token.id.clone(),
-                user_id: user_id.clone(),
+                id: token.id,
+                user_id,
                 _r: true,
             };
 
             repository
                 .secret_key()
-                .add(&token.id, &secret_key)
+                .add(token.id, &secret_key)
                 .await
                 .unwrap();
 
-            let get_user_info = command::tests::GetUserInfo::from(UserInfo {
-                id: user_id.clone(),
+            let get_user_info = command::tests::GetUser::from(User {
+                id: user_id,
                 email: "".to_string(),
-                role: 0
+                role: 0,
+                name: "".to_string(),
+                created_at: Utc::now(),
+                updated_at: Utc::now()
             });
 
             command.set_get_user_info(get_user_info);
@@ -416,7 +429,7 @@ mod tests {
                     UseCase(CheckAndRefreshTokenPair(PermissionDenied(TokenPair { access_token, refresh_token }))) => {
                         let p = AccessToken::deserialize_payload(&access_token).expect("deserialize payload from access token");
 
-                        let secret_key = repository.secret_key().get(&p.id).await.unwrap().unwrap();
+                        let secret_key = repository.secret_key().get(p.id).await.unwrap().unwrap();
 
                         AccessToken::deserialize(&access_token, &secret_key, true).expect("deserialize access token");
                         RefreshToken::deserialize(&refresh_token, &secret_key).expect("deserialize refresh token");
