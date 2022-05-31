@@ -7,6 +7,7 @@ use util::{r#async::AsyncTryFrom, IntoPayload, ReadChunks};
 
 use crate::usecase::{
     check_access_token, check_and_refresh_token_pair, check_authcode, create_authcode,
+    delete_token_pair,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -28,6 +29,7 @@ pub enum Msg {
     // RefreshTokenPair(check_token_pair::Payload),
     CheckAccessToken(check_access_token::Payload),
     CheckAndRefreshTokenPair(check_and_refresh_token_pair::Payload),
+    DeleteTokenPair(delete_token_pair::Payload),
 }
 
 impl Msg {
@@ -49,6 +51,7 @@ impl Msg {
                 Msg::CreateTokenPair(Wrap::async_try_from(request).await?.inner())
             }
             (Method::PATCH, "/auth/token") => Msg::CheckAndRefreshTokenPair(request.try_into()?),
+            (Method::DELETE, "/auth/token") => Msg::DeleteTokenPair(request.try_into()?),
             (Method::POST, "/auth/code") => Msg::CreateAuthcode(request.into_payload(()).await?),
 
             _ => return Err(Error::NotFound.into()),

@@ -6,6 +6,7 @@ use crate::{
     into_model,
     usecase::{
         check_access_token, check_and_refresh_token_pair, create_authcode, create_token_pair,
+        delete_token_pair,
     },
 };
 
@@ -25,6 +26,7 @@ into_model![
         check_and_refresh_token_pair::Model
     ),
     (CreateTokenPair, create_token_pair::Model),
+    (DeleteTokenPair, delete_token_pair::Model),
 ];
 
 pub trait Presenter: Sized {
@@ -124,6 +126,28 @@ impl Presenter for create_token_pair::Model {
         };
 
         token_pair.to_http(response)
+    }
+}
+
+impl Presenter for delete_token_pair::Model {
+    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
+        let max_age_0 = SetCookieOptions::new()
+            .domain("madome.app")
+            .path("/")
+            .http_only(true)
+            .secure(true)
+            .max_age(0);
+
+        let set_cookie = SetCookie::new()
+            .set(MADOME_ACCESS_TOKEN, "", max_age_0.clone())
+            .set(MADOME_REFRESH_TOKEN, "", max_age_0);
+
+        let response = response.headers(set_cookie.iter());
+
+        response
+            .status(StatusCode::NO_CONTENT)
+            .body(Body::empty())
+            .unwrap()
     }
 }
 

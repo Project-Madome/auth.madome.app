@@ -5,7 +5,8 @@ use crate::{
     command::{get_user_info, random_code, send_email},
     usecase::{
         check_access_token, check_and_refresh_token_pair, check_authcode, check_refresh_token,
-        check_token_pair, create_authcode, create_token_pair, refresh_token_pair,
+        check_token_pair, create_authcode, create_token_pair, delete_token_pair,
+        refresh_token_pair,
     },
 };
 
@@ -74,6 +75,8 @@ pub enum UseCaseError {
     CheckAndRefreshTokenPair(#[from] check_and_refresh_token_pair::Error),
     #[error("RefreshTokenPair: {0}")]
     RefreshTokenPair(#[from] refresh_token_pair::Error),
+    #[error("DeleteTokenPair: {0}")]
+    DeleteTokenPair(#[from] delete_token_pair::Error),
 }
 
 impl From<Error> for Response<Body> {
@@ -147,6 +150,10 @@ impl From<Error> for Response<Body> {
                     .headers(SetCookie::from(token_pair).iter())
                     .body(err_str.into())
             }
+
+            UseCase(DeleteTokenPair(err @ delete_token_pair::Error::InvalidToken)) => response
+                .status(StatusCode::BAD_REQUEST)
+                .body(err.to_string().into()),
 
             UserSdk(ref err) => {
                 use madome_sdk::api::{
