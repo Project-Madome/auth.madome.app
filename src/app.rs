@@ -19,8 +19,8 @@ use crate::model::{Model, Presenter};
 use crate::msg::Msg;
 use crate::repository::RepositorySet;
 use crate::usecase::{
-    check_access_token, check_and_refresh_token_pair, check_authcode, create_authcode,
-    create_token_pair, delete_token_pair,
+    check_access_token, check_authcode, create_authcode, create_token_pair, delete_token_pair,
+    refresh_token_pair,
 };
 
 #[cfg_attr(test, derive(Default))]
@@ -68,8 +68,8 @@ impl Resolver {
                     .into()
             }
 
-            Msg::CheckAndRefreshTokenPair(payload) => {
-                check_and_refresh_token_pair::execute(payload, repository, command)
+            Msg::RefreshTokenPair(payload) => {
+                refresh_token_pair::execute(payload, repository, command)
                     .await?
                     .into()
             }

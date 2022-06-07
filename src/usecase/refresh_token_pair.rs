@@ -1,5 +1,8 @@
 use std::sync::Arc;
 
+use hyper::{Body, Request};
+use madome_sdk::api::cookie::{MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
+use util::http::Cookie;
 use uuid::Uuid;
 
 use crate::{
@@ -14,6 +17,22 @@ use super::{check_token_pair, create_token_pair};
 pub struct Payload {
     pub access_token: String,
     pub refresh_token: String,
+}
+
+impl TryFrom<Request<Body>> for Payload {
+    type Error = crate::Error;
+
+    fn try_from(request: Request<Body>) -> Result<Self, Self::Error> {
+        let mut cookie = Cookie::from(&request);
+
+        let access_token = cookie.take(MADOME_ACCESS_TOKEN).unwrap_or_default();
+        let refresh_token = cookie.take(MADOME_REFRESH_TOKEN).unwrap_or_default();
+
+        Ok(Self {
+            access_token,
+            refresh_token,
+        })
+    }
 }
 
 pub struct Model {
@@ -73,6 +92,4 @@ pub async fn execute(
 }
 
 #[cfg(test)]
-mod tests {
-    // TODO: success, error_invalid_auth_code(시간 초과된 걸로 테스트 해야함, 시간을 설정할 수 있게 가능한가?)
-}
+mod tests {}

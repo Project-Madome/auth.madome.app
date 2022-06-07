@@ -122,6 +122,10 @@ impl From<Error> for Response<Body> {
                 .status(StatusCode::NOT_FOUND)
                 .body(err.to_string().into()),
 
+            UseCase(CreateAuthcode(err @ InvalidEmail)) => response
+                .status(StatusCode::BAD_REQUEST)
+                .body(err.to_string().into()),
+
             UseCase(CreateAuthcode(err @ TooManyCreatedAuthcode)) => response
                 .status(StatusCode::TOO_MANY_REQUESTS)
                 .body(err.to_string().into()),

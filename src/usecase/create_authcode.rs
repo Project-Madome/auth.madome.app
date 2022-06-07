@@ -3,7 +3,7 @@ use std::sync::Arc;
 use either::Either;
 use hyper::{Body, Request};
 use serde::Deserialize;
-use util::{r#async::AsyncTryFrom, FromOwnedRequest};
+use util::{r#async::AsyncTryFrom, validate::ValidatorStringExt, FromOwnedRequest};
 
 use crate::{
     command::CommandSet,
@@ -23,6 +23,19 @@ pub struct Payload {
     /// false => don't send email
     #[serde(default)]
     pub ses_flag: bool,
+}
+
+impl Payload {
+    fn check(self) -> crate::Result<Self> {
+        let user_email = self
+            .user_email
+            .validate()
+            .email()
+            .take()
+            .map_err(|_| Error::InvalidEmail)?;
+
+        Ok(Self { user_email, ..self })
+    }
 }
 
 #[async_trait::async_trait]
@@ -48,7 +61,7 @@ impl FromOwnedRequest for Payload {
         Ok(Self {
             #[cfg(debug_assertions)]
             ses_flag,
-            ..payload
+            ..payload.check()?
         })
     }
 }
@@ -57,6 +70,9 @@ pub struct Model;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("Invalid email")]
+    InvalidEmail,
+
     #[error("Not found user")]
     NotFoundUser,
 

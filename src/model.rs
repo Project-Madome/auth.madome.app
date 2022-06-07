@@ -6,7 +6,7 @@ use crate::{
     into_model,
     usecase::{
         check_access_token, check_and_refresh_token_pair, create_authcode, create_token_pair,
-        delete_token_pair,
+        delete_token_pair, refresh_token_pair,
     },
 };
 
@@ -21,10 +21,7 @@ into_model![
     (TokenPair, TokenPair),
     (CreateAuthcode, create_authcode::Model),
     (CheckAccessToken, check_access_token::Model),
-    (
-        CheckAndRefreshTokenPair,
-        check_and_refresh_token_pair::Model
-    ),
+    (RefreshTokenPair, refresh_token_pair::Model),
     (CreateTokenPair, create_token_pair::Model),
     (DeleteTokenPair, delete_token_pair::Model),
 ];
@@ -115,6 +112,17 @@ impl Presenter for check_and_refresh_token_pair::Model {
             .header(header::CONTENT_TYPE, "application/json")
             .body(serialized.into())
             .unwrap()
+    }
+}
+
+impl Presenter for refresh_token_pair::Model {
+    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
+        let token_pair = TokenPair {
+            access_token: self.access_token,
+            refresh_token: self.refresh_token,
+        };
+
+        token_pair.to_http(response)
     }
 }
 
