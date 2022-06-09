@@ -50,12 +50,16 @@ impl AuthcodeRepository for RedisAuthcodeRepository {
         }
 
         let key = format!("authcode:{}:{}", user_email, code);
-        let max_age = authcode::MAX_AGE.to_string();
+        let max_age = authcode::MAX_AGE;
 
-        let r: bool = redis::cmd("SETEX")
-            .arg(&[&key, &max_age, &code])
-            .query_async(&mut redis)
-            .await?;
+        /* let r: bool = redis::cmd("SETEX")
+        .arg(&[&key, &max_age, &code])
+        .query_async(&mut redis)
+        .await?; */
+
+        let r = redis.set_ex(key, code, max_age as usize).await?;
+
+        log::debug!("r = {r}");
 
         Ok(r)
     }
