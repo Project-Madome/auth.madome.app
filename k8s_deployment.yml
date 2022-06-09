@@ -71,7 +71,7 @@ spec:
         spec:
             containers:
                 - name: redis
-                  image: "redis:6"
+                  image: "redis:7"
                   resources:
                       limits:
                           memory: "512Mi"
